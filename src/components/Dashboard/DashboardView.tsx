@@ -18,7 +18,8 @@ interface DashboardViewProps {
     handleDeleteUnit: (id: string) => void;
     setShowBuildingModal: (show: boolean) => void;
     onOpenStructuralManager: (unitId: string) => void;
-    onOpenRoomManager: (unitId: string) => void; // New Prop
+    onOpenRoomManager: (unitId: string) => void;
+    handleUpdateUnitCount: (unitId: string, count: number) => void; // New Prop
     handleToggleStructuralSource: (unitId: string) => void;
     handleUpdateCostItem: (catId: string, itemName: string, field: 'manualQuantity' | 'manualPrice', value: number | undefined) => void;
 }
@@ -40,6 +41,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setShowBuildingModal,
     onOpenStructuralManager,
     onOpenRoomManager,
+    handleUpdateUnitCount,
     handleToggleStructuralSource,
     handleUpdateCostItem
 }) => {
@@ -151,7 +153,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-2xl font-bold text-white">{unit.count} <span className="text-sm font-normal text-slate-500">Adet</span></div>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <input 
+                                                    type="number" 
+                                                    min="1"
+                                                    value={unit.count} 
+                                                    onChange={(e) => handleUpdateUnitCount(unit.id, parseInt(e.target.value))}
+                                                    className="w-16 bg-slate-900 border border-slate-600 rounded p-1 text-center text-white font-bold text-lg focus:border-blue-500 outline-none"
+                                                />
+                                                <span className="text-sm font-normal text-slate-500">Adet</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="mt-4 pt-3 border-t border-slate-700 flex justify-between text-xs text-slate-400">

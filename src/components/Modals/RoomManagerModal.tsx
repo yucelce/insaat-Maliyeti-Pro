@@ -56,14 +56,30 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({ unit, onClos
         }));
     };
 
+    const handleAreaChange = (val: string) => {
+        const newArea = parseFloat(val);
+        
+        // 4:3 Ratio Calculation logic
+        // Area = 4x * 3x = 12x^2  => x = sqrt(Area/12)
+        // Perimeter = 2 * (4x + 3x) = 14x => 14 * sqrt(Area/12)
+        let newPerimeter = form.perimeter;
+        
+        if (!isNaN(newArea) && newArea > 0) {
+            newPerimeter = parseFloat((14 * Math.sqrt(newArea / 12)).toFixed(2));
+        }
+
+        setForm(prev => ({
+            ...prev,
+            area: newArea,
+            perimeter: newPerimeter
+        }));
+    };
+
     const handleAddRoom = () => {
         if (form.area <= 0) {
             alert("Lütfen geçerli bir alan giriniz.");
             return;
         }
-
-        // Auto-calculate perimeter if 0 (assume square for approximation: 4 * sqrt(area))
-        const finalPerimeter = form.perimeter > 0 ? form.perimeter : parseFloat((4 * Math.sqrt(form.area)).toFixed(2));
 
         const newRoom: Room = {
             id: Date.now().toString(),
@@ -72,7 +88,7 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({ unit, onClos
             area_px: 0,
             perimeter_px: 0,
             manualAreaM2: form.area,
-            manualPerimeterM: finalPerimeter,
+            manualPerimeterM: form.perimeter,
             type: form.type,
             properties: {
                 ceilingHeight: form.height,
@@ -89,7 +105,7 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({ unit, onClos
             rooms: [...unit.rooms, newRoom]
         });
 
-        // Reset name and area for next entry, keep others
+        // Reset name, area and perimeter for next entry, keep others
         setForm(prev => ({ ...prev, name: '', area: 0, perimeter: 0 }));
     };
 
@@ -143,11 +159,25 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({ unit, onClos
                         <div className="grid grid-cols-2 gap-2">
                              <div>
                                 <label className="text-[10px] text-slate-400 font-bold block mb-1">Alan (m²)</label>
-                                <input type="number" value={form.area || ''} onChange={e=>setForm({...form, area: parseFloat(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm" />
+                                <input 
+                                    type="number" 
+                                    value={form.area || ''} 
+                                    onChange={e => handleAreaChange(e.target.value)} 
+                                    className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm focus:border-blue-500 outline-none transition" 
+                                />
                             </div>
                             <div>
                                 <label className="text-[10px] text-slate-400 font-bold block mb-1">Çevre (m)</label>
-                                <input type="number" value={form.perimeter || ''} onChange={e=>setForm({...form, perimeter: parseFloat(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm" placeholder="Oto" />
+                                <div className="relative">
+                                    <input 
+                                        type="number" 
+                                        value={form.perimeter || ''} 
+                                        onChange={e=>setForm({...form, perimeter: parseFloat(e.target.value)})} 
+                                        className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm focus:border-green-500 outline-none transition" 
+                                        placeholder="Oto" 
+                                    />
+                                    <span className="absolute right-2 top-2 text-[9px] text-green-500 font-bold opacity-60">4:3</span>
+                                </div>
                             </div>
                         </div>
 

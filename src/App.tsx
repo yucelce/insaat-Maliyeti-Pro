@@ -21,7 +21,6 @@ export const App = () => {
   const [editorScope, setEditorScope] = useState<'architectural' | 'structural'>('architectural');
 
   const [costs, setCosts] = useState<CostCategory[]>(COST_DATA);
-  const [originalWixPrices, setOriginalWixPrices] = useState<Map<string, number>>(new Map());
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
   const toggleCategory = (id: string) => {
@@ -58,7 +57,6 @@ export const App = () => {
 
   const [showBuildingModal, setShowBuildingModal] = useState(false);
   const [isFetchingHeat, setIsFetchingHeat] = useState(false);
-  const [isFetchingPrices, setIsFetchingPrices] = useState(false);
 
   // --- Editor State ---
   const [editorImage, setEditorImage] = useState<HTMLImageElement | null>(null);
@@ -170,7 +168,6 @@ export const App = () => {
   // --- Fetch Prices ---
   useEffect(() => {
     const fetchPrices = async () => {
-        setIsFetchingPrices(true);
         try {
             const WIX_API_URL = 'https://your-wix-site-url.com/_functions/fiyatListesi'; 
             const response = await fetch(WIX_API_URL);
@@ -184,7 +181,7 @@ export const App = () => {
                              priceMap.set(item._id, Number(item.fiyat));
                          }
                     });
-                    setOriginalWixPrices(priceMap);
+                    
                     setCosts(prevCosts => prevCosts.map(cat => ({
                         ...cat,
                         items: cat.items.map(item => {
@@ -198,8 +195,6 @@ export const App = () => {
             }
         } catch (error) {
             console.warn("Failed to fetch prices from Wix backend (Check URL)", error);
-        } finally {
-            setIsFetchingPrices(false);
         }
     };
     fetchPrices();
@@ -235,6 +230,11 @@ export const App = () => {
           structuralSource: 'global_calculated'
       };
       setUnits([...units, newUnit]);
+  };
+  
+  // New handler for updating count directly
+  const handleUpdateUnitCount = (id: string, count: number) => {
+      setUnits(units.map(u => u.id === id ? { ...u, count: Math.max(0, count) } : u));
   };
 
   const handleToggleStructuralSource = (id: string) => {
@@ -650,6 +650,7 @@ export const App = () => {
             setShowBuildingModal={setShowBuildingModal}
             onOpenStructuralManager={(id) => setStructuralManagerUnitId(id)}
             onOpenRoomManager={(id) => setRoomManagerUnitId(id)}
+            handleUpdateUnitCount={handleUpdateUnitCount}
             handleToggleStructuralSource={handleToggleStructuralSource}
             handleUpdateCostItem={handleUpdateCostItem}
         />
