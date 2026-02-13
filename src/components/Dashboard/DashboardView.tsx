@@ -10,19 +10,21 @@ interface DashboardViewProps {
     interiorFitoutCost: number;
     projectCostDetails: { id: string, title: string, totalCategoryCost: number, items: any[] }[];
     units: UnitType[];
-    structuralUnits: UnitType[]; // New Prop
+    structuralUnits: UnitType[]; 
     expandedCategories: Record<string, boolean>;
     toggleCategory: (id: string) => void;
     handleAddUnit: () => void;
-    handleAddStructuralUnit: () => void; // New Prop
+    handleAddStructuralUnit: () => void;
     handleEditUnit: (id: string) => void;
     handleEditUnitStructural: (id: string) => void;
-    handleDeleteUnit: (id: string, isStructural: boolean) => void; // Updated Prop
+    handleDeleteUnit: (id: string, isStructural: boolean) => void; 
     setShowBuildingModal: (show: boolean) => void;
     onOpenStructuralManager: (unitId: string) => void;
     onOpenRoomManager: (unitId: string) => void;
-    handleUpdateUnitCount: (unitId: string, count: number, isStructural: boolean) => void; // Updated Prop
-    handleToggleStructuralSource: (unitId: string) => void;
+    handleUpdateUnitCount: (unitId: string, count: number, isStructural: boolean) => void; 
+    handleUpdateUnitName: (unitId: string, name: string, isStructural: boolean) => void; // New Prop
+    structuralGlobalMode: 'auto' | 'detailed'; // New Prop
+    handleToggleGlobalStructuralMode: () => void; // New Prop
     handleUpdateCostItem: (catId: string, itemName: string, field: 'manualQuantity' | 'manualPrice', value: number | undefined) => void;
 }
 
@@ -46,7 +48,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     onOpenStructuralManager,
     onOpenRoomManager,
     handleUpdateUnitCount,
-    handleToggleStructuralSource,
+    handleUpdateUnitName,
+    structuralGlobalMode,
+    handleToggleGlobalStructuralMode,
     handleUpdateCostItem
 }) => {
     
@@ -151,8 +155,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                 </div>
                                 <div className="p-4">
                                     <div className="flex justify-between items-start">
-                                        <div>
-                                            <div className="font-bold text-white mb-1">{unit.name}</div>
+                                        <div className="flex-1 mr-4">
+                                            {/* Renamable Name Input */}
+                                            <input 
+                                                type="text" 
+                                                value={unit.name} 
+                                                onChange={(e) => handleUpdateUnitName(unit.id, e.target.value, false)}
+                                                className="w-full bg-transparent border-b border-transparent hover:border-slate-600 focus:border-blue-500 text-white font-bold mb-1 outline-none transition px-0"
+                                            />
                                             <div className="text-xs text-slate-400 uppercase bg-slate-900 px-2 py-1 rounded inline-block">
                                                 {unit.floorType === 'ground' ? 'Zemin Kat' : unit.floorType === 'basement' ? 'Bodrum' : 'Normal Kat'}
                                             </div>
@@ -182,14 +192,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                  {/* 3. SECTION: YAPISAL ELEMANLAR DETAY PANELİ (Structural Floors) */}
                  <section className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl">
-                    <div className="mb-6 flex justify-between items-center">
+                    <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h2 className="text-xl font-bold text-white flex items-center gap-2">
                                 <i className="fas fa-hard-hat text-orange-500"></i> Yapısal Elemanlar Detay Paneli
                             </h2>
                             <p className="text-sm text-slate-400 mt-1">Kat planları bazında duvar, kolon ve kirişlerin görsel/manuel metraj yönetimi</p>
                         </div>
-                        <button onClick={handleAddStructuralUnit} className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center gap-2 text-sm"><i className="fas fa-plus"></i> Yeni Kat Planı</button>
+                        
+                        <div className="flex items-center gap-4">
+                            {/* Global Toggle Switch */}
+                            <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-700">
+                                <button 
+                                    onClick={handleToggleGlobalStructuralMode} 
+                                    className={`px-4 py-2 text-sm font-bold rounded transition flex items-center gap-2 ${structuralGlobalMode === 'auto' ? 'bg-yellow-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                                >
+                                    <i className="fas fa-calculator"></i> Otomatik
+                                </button>
+                                <button 
+                                    onClick={handleToggleGlobalStructuralMode} 
+                                    className={`px-4 py-2 text-sm font-bold rounded transition flex items-center gap-2 ${structuralGlobalMode === 'detailed' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                                >
+                                    <i className="fas fa-ruler-combined"></i> Detaylı
+                                </button>
+                            </div>
+
+                            <button onClick={handleAddStructuralUnit} className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center gap-2 text-sm h-10"><i className="fas fa-plus"></i> Yeni Kat Planı</button>
+                        </div>
                     </div>
                     
                     <div className="space-y-3">
@@ -197,18 +226,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {structuralUnits.map(unit => (
                             <div key={unit.id} className="bg-slate-900/40 border border-slate-700 rounded-lg p-4 flex flex-col justify-between gap-4 hover:bg-slate-900/60 transition group">
                                 <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-4 flex-1">
                                         <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold border border-slate-600 group-hover:border-orange-500 group-hover:text-orange-500 transition">{unit.name.substring(0,2)}</div>
-                                        <div>
-                                            <div className="font-bold text-white text-sm">{unit.name}</div>
+                                        <div className="flex-1">
+                                            {/* Renamable Name Input */}
+                                            <input 
+                                                type="text" 
+                                                value={unit.name} 
+                                                onChange={(e) => handleUpdateUnitName(unit.id, e.target.value, true)}
+                                                className="w-full bg-transparent border-b border-transparent hover:border-slate-600 focus:border-orange-500 text-white font-bold text-sm outline-none transition px-0 max-w-md"
+                                            />
                                             <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
-                                                {unit.structuralSource === 'global_calculated' ? (
+                                                {structuralGlobalMode === 'auto' ? (
                                                      <span className="bg-yellow-900/50 text-yellow-500 px-2 py-0.5 rounded border border-yellow-800">
-                                                        <i className="fas fa-calculator mr-1"></i>Genel Oranlar (Otomatik)
+                                                        <i className="fas fa-info-circle mr-1"></i>Kaba Yapı Genel Oranlardan Hesaplanıyor
                                                      </span>
                                                 ) : (
                                                     <span className="bg-green-900/50 text-green-500 px-2 py-0.5 rounded border border-green-800">
-                                                        <i className="fas fa-ruler-combined mr-1"></i>Detaylı Metraj (Proje)
+                                                        <i className="fas fa-check-circle mr-1"></i>Çizim Metrajı Dahil Ediliyor
                                                      </span>
                                                 )}
                                             </div>
@@ -227,22 +262,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                             />
                                             <span className="text-xs font-normal text-slate-500">Adet</span>
                                         </div>
-
-                                        {/* Source Toggle */}
-                                        <div className="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700">
-                                            <button 
-                                                onClick={() => handleToggleStructuralSource(unit.id)} 
-                                                className={`px-3 py-1 text-xs font-bold rounded transition ${unit.structuralSource === 'global_calculated' ? 'bg-yellow-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                                            >
-                                                Otomatik
-                                            </button>
-                                            <button 
-                                                onClick={() => handleToggleStructuralSource(unit.id)} 
-                                                className={`px-3 py-1 text-xs font-bold rounded transition ${unit.structuralSource === 'detailed_unit' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                                            >
-                                                Detaylı
-                                            </button>
-                                        </div>
                                         
                                         <button onClick={() => handleDeleteUnit(unit.id, true)} className="text-red-500 hover:text-red-400 px-2"><i className="fas fa-trash"></i></button>
                                     </div>
@@ -250,18 +269,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                 
                                 <div className="flex items-center gap-4 border-t border-slate-700/50 pt-3">
                                     <div className="text-xs text-slate-500 flex gap-3 flex-1">
-                                        {unit.structuralSource === 'detailed_unit' ? (
-                                            <>
-                                                <span><i className="fas fa-th-large mr-1 text-yellow-600"></i>{unit.walls.length} Duvar</span>
-                                                <span><i className="fas fa-square mr-1 text-red-600"></i>{unit.columns.length} Kolon</span>
-                                                <span><i className="fas fa-grip-lines mr-1 text-blue-600"></i>{unit.beams.length} Kiriş</span>
-                                            </>
-                                        ) : (
-                                            <span className="italic text-slate-600">Bu kat için metraj m² üzerinden yaklaşık hesaplanıyor...</span>
-                                        )}
+                                        <span><i className="fas fa-th-large mr-1 text-yellow-600"></i>{unit.walls.length} Duvar</span>
+                                        <span><i className="fas fa-square mr-1 text-red-600"></i>{unit.columns.length} Kolon</span>
+                                        <span><i className="fas fa-grip-lines mr-1 text-blue-600"></i>{unit.beams.length} Kiriş</span>
                                     </div>
 
-                                    <div className={`flex gap-2 transition-opacity duration-300 ${unit.structuralSource === 'global_calculated' ? 'opacity-50 pointer-events-none grayscale' : 'opacity-100'}`}>
+                                    <div className="flex gap-2 transition-opacity duration-300">
                                         <button onClick={() => handleEditUnitStructural(unit.id)} className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold border border-orange-600 transition shadow-sm flex-1 md:flex-initial">
                                             <i className="fas fa-drafting-compass mr-2"></i>Plan Üzerinde Çalış
                                         </button>

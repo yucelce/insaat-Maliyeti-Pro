@@ -4,6 +4,7 @@ import { Point, RoomType, WallMaterial, UnitFloorType, RoomProperties, WallPrope
 import { TURKEY_HEAT_MAP } from './constants';
 import { getPolygonAreaAndPerimeter, isPointInPolygon, distanceToSegment, floodFillRoom } from './utils/geometry';
 import { calculateUnitCost } from './utils/calculations';
+import { WIX_PRICE_MAP } from './wix_price_mapping'; // Import Mapping File
 
 // Components
 import { BuildingModal } from './components/Modals/BuildingModals';
@@ -19,6 +20,9 @@ export const App = () => {
   
   // New State: Editor Scope ('architectural' for Rooms, 'structural' for Walls/Columns/Beams)
   const [editorScope, setEditorScope] = useState<'architectural' | 'structural'>('architectural');
+
+  // Structural Global Mode ('auto' | 'detailed')
+  const [structuralGlobalMode, setStructuralGlobalMode] = useState<'auto' | 'detailed'>('auto');
 
   const [costs, setCosts] = useState<CostCategory[]>(COST_DATA);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
@@ -41,7 +45,7 @@ export const App = () => {
       {
           id: 's1', name: 'Normal Kat Planı', count: 5, rooms: [], walls: [], columns: [], beams: [],
           floorType: 'normal', imageData: null, scale: 0, lastEdited: Date.now(),
-          structuralSource: 'detailed_unit' // Default to detailed for structural plans
+          structuralSource: 'global_calculated' // Default follows global mode
       }
   ]);
 
@@ -129,8 +133,14 @@ export const App = () => {
     });
 
     // 2. Process Structural Floors - Mostly Concrete, Rebar, Walls
+    // Sync structuralSource with global mode before calculation
     structuralUnits.forEach(sUnit => {
-        const { quantities } = calculateUnitCost(sUnit, costs, buildingStats);
+        // Create a temporary unit with the correct source based on global mode
+        const effectiveUnit = {
+            ...sUnit,
+            structuralSource: structuralGlobalMode === 'detailed' ? 'detailed_unit' as const : 'global_calculated' as const
+        };
+        const { quantities } = calculateUnitCost(effectiveUnit, costs, buildingStats);
         Object.entries(quantities).forEach(([key, val]) => {
             aggregatedQuantities.set(key, (aggregatedQuantities.get(key) || 0) + (val * sUnit.count));
         });
@@ -143,7 +153,12 @@ export const App = () => {
 
             // Determine Auto Quantity
             if (item.auto_source === 'total_area') {
-                autoQty = totalConstructionArea * item.multiplier;
+                if (structuralGlobalMode === 'detailed' && category.id === 'kaba_insaat') {
+                     autoQty = aggregatedQuantities.get(item.name) || 0;
+                } else {
+                    autoQty = totalConstructionArea * item.multiplier;
+                }
+
             } else if (item.auto_source !== 'manual') {
                 autoQty = aggregatedQuantities.get(item.name) || 0;
             }
@@ -183,31 +198,40 @@ export const App = () => {
         globalStructuralCost: structuralCost,
         interiorFitoutCost: fitoutCost
     };
-  }, [costs, units, structuralUnits, totalConstructionArea, buildingStats]);
+  }, [costs, units, structuralUnits, totalConstructionArea, buildingStats, structuralGlobalMode]);
 
   // --- Fetch Prices ---
   useEffect(() => {
     const fetchPrices = async () => {
         try {
-            const WIX_API_URL = 'https://your-wix-site-url.com/_functions/fiyatListesi'; 
+            // Update this URL with your actual Wix Http Function URL
+            // e.g. https://your-site.com/_functions/get_fiyatListesi
+            const WIX_API_URL = 'https://your-wix-site-url.com/_functions/get_fiyatListesi'; 
             const response = await fetch(WIX_API_URL);
             
             if (response.ok) {
                 const result = await response.json();
                 if (result.status === 'success' && Array.isArray(result.data)) {
-                    const priceMap = new Map<string, number>();
+                    // 1. Wix'ten gelen veriyi ID -> Fiyat haritasına çevir
+                    const wixPriceLookup = new Map<string, number>();
                     result.data.forEach((item: any) => {
                          if (item._id && item.fiyat) {
-                             priceMap.set(item._id, Number(item.fiyat));
+                             wixPriceLookup.set(item._id, Number(item.fiyat));
                          }
                     });
                     
+                    // 2. COST_DATA'yı güncelle, eşleştirme için WIX_PRICE_MAP kullan
                     setCosts(prevCosts => prevCosts.map(cat => ({
                         ...cat,
                         items: cat.items.map(item => {
-                            if (item.wixId && priceMap.has(item.wixId)) {
-                                return { ...item, unit_price: priceMap.get(item.wixId)! };
+                            // Harita dosyasından bu malzemenin Wix ID'sini bul
+                            const targetWixId = WIX_PRICE_MAP[item.name];
+
+                            // Eğer haritada bir ID varsa ve Wix'ten bu ID için fiyat geldiyse güncelle
+                            if (targetWixId && wixPriceLookup.has(targetWixId)) {
+                                return { ...item, unit_price: wixPriceLookup.get(targetWixId)! };
                             }
+                            // Eşleşme yoksa eski fiyatı koru
                             return item;
                         })
                     })));
@@ -257,7 +281,8 @@ export const App = () => {
           count: 1,
           rooms: [], walls: [], columns: [], beams: [],
           imageData: null, scale: 0, lastEdited: Date.now(),
-          structuralSource: 'detailed_unit'
+          // structuralSource follows global mode conceptually, but we store individual state for calculations
+          structuralSource: structuralGlobalMode === 'detailed' ? 'detailed_unit' : 'global_calculated'
       };
       setStructuralUnits([...structuralUnits, newSUnit]);
   };
@@ -270,18 +295,23 @@ export const App = () => {
       }
   };
 
-  const handleToggleStructuralSource = (id: string) => {
-      // Typically used for Structural Plans, but can be for Units too if user wants to draw walls inside units
-      const targetIsStructural = structuralUnits.some(u => u.id === id);
-      if (targetIsStructural) {
-          setStructuralUnits(structuralUnits.map(u => u.id === id ? { 
-            ...u, structuralSource: u.structuralSource === 'global_calculated' ? 'detailed_unit' : 'global_calculated' 
-        } : u));
+  const handleUpdateUnitName = (id: string, name: string, isStructural: boolean) => {
+      if (isStructural) {
+          setStructuralUnits(structuralUnits.map(u => u.id === id ? { ...u, name } : u));
       } else {
-          setUnits(units.map(u => u.id === id ? { 
-            ...u, structuralSource: u.structuralSource === 'global_calculated' ? 'detailed_unit' : 'global_calculated' 
-        } : u));
+          setUnits(units.map(u => u.id === id ? { ...u, name } : u));
       }
+  }
+
+  const handleToggleGlobalStructuralMode = () => {
+      const newMode = structuralGlobalMode === 'auto' ? 'detailed' : 'auto';
+      setStructuralGlobalMode(newMode);
+      
+      // Update all structural units to match the new global mode
+      setStructuralUnits(structuralUnits.map(u => ({
+          ...u,
+          structuralSource: newMode === 'detailed' ? 'detailed_unit' : 'global_calculated'
+      })));
   };
 
   // Generalized function to open editor
@@ -404,15 +434,16 @@ export const App = () => {
     if (view !== 'editor') return;
     const currentUnit = units.find(u=>u.id===activeUnitId) || structuralUnits.find(u=>u.id===activeUnitId);
 
+    // When inside editor, we want to see the Detailed Calculation for feedback regardless of global mode
+    // unless we strictly want to see what 'auto' looks like.
+    // Usually, Editor = Detailed view.
     const tempUnit: UnitType = {
         id: 'temp', name: 'temp', count: 1, 
         rooms: editorRooms, walls: editorWalls, columns: editorColumns, beams: editorBeams,
         floorType: currentUnit?.floorType || 'normal',
         imageData: null, scale: editorScale, lastEdited: 0,
-        structuralSource: editorScope === 'structural' ? 'detailed_unit' : 'global_calculated' // Temporary for calc
+        structuralSource: 'detailed_unit' 
     };
-    // Force detailed calculation for immediate feedback in editor if in structural scope
-    tempUnit.structuralSource = 'detailed_unit';
     
     const { quantities, stats } = calculateUnitCost(tempUnit, costs, buildingStats);
     setEditorQuantities(quantities);
@@ -714,7 +745,9 @@ export const App = () => {
             onOpenStructuralManager={(id) => setStructuralManagerUnitId(id)}
             onOpenRoomManager={(id) => setRoomManagerUnitId(id)}
             handleUpdateUnitCount={handleUpdateUnitCount}
-            handleToggleStructuralSource={handleToggleStructuralSource}
+            handleUpdateUnitName={handleUpdateUnitName}
+            structuralGlobalMode={structuralGlobalMode}
+            handleToggleGlobalStructuralMode={handleToggleGlobalStructuralMode}
             handleUpdateCostItem={handleUpdateCostItem}
         />
       ) : (
