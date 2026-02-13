@@ -10,16 +10,18 @@ interface DashboardViewProps {
     interiorFitoutCost: number;
     projectCostDetails: { id: string, title: string, totalCategoryCost: number, items: any[] }[];
     units: UnitType[];
+    structuralUnits: UnitType[]; // New Prop
     expandedCategories: Record<string, boolean>;
     toggleCategory: (id: string) => void;
     handleAddUnit: () => void;
+    handleAddStructuralUnit: () => void; // New Prop
     handleEditUnit: (id: string) => void;
     handleEditUnitStructural: (id: string) => void;
-    handleDeleteUnit: (id: string) => void;
+    handleDeleteUnit: (id: string, isStructural: boolean) => void; // Updated Prop
     setShowBuildingModal: (show: boolean) => void;
     onOpenStructuralManager: (unitId: string) => void;
     onOpenRoomManager: (unitId: string) => void;
-    handleUpdateUnitCount: (unitId: string, count: number) => void; // New Prop
+    handleUpdateUnitCount: (unitId: string, count: number, isStructural: boolean) => void; // Updated Prop
     handleToggleStructuralSource: (unitId: string) => void;
     handleUpdateCostItem: (catId: string, itemName: string, field: 'manualQuantity' | 'manualPrice', value: number | undefined) => void;
 }
@@ -32,9 +34,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     interiorFitoutCost,
     projectCostDetails,
     units,
+    structuralUnits,
     expandedCategories,
     toggleCategory,
     handleAddUnit,
+    handleAddStructuralUnit,
     handleEditUnit,
     handleEditUnitStructural,
     handleDeleteUnit,
@@ -124,7 +128,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </div>
                  </section>
 
-                 {/* 2. SECTION: BAĞIMSIZ BÖLÜM TİPLERİ (Unit Types) */}
+                 {/* 2. SECTION: BAĞIMSIZ BÖLÜM TİPLERİ (Apartment Units) */}
                  <section>
                     <div className="flex justify-between items-center mb-4">
                         <div>
@@ -134,6 +138,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <button onClick={handleAddUnit} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center gap-2 text-sm"><i className="fas fa-plus"></i> Yeni Tip Ekle</button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {units.length === 0 && <div className="col-span-full text-center text-slate-500 py-8 bg-slate-800/30 rounded-lg">Henüz daire tipi eklenmemiş.</div>}
                         {units.map(unit => (
                             <div key={unit.id} className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl hover:border-slate-600 transition group relative">
                                 <div className="h-40 bg-slate-900 relative flex items-center justify-center border-b border-slate-700">
@@ -141,7 +146,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-3">
                                         <button onClick={() => handleEditUnit(unit.id)} className="bg-blue-600 text-white px-4 py-2 rounded-full font-bold text-sm">Planı Düzenle</button>
                                          <button onClick={() => onOpenRoomManager(unit.id)} className="bg-purple-600 text-white px-4 py-2 rounded-full font-bold text-sm">Manuel Liste</button>
-                                        <button onClick={() => handleDeleteUnit(unit.id)} className="bg-red-600 text-white w-10 h-10 rounded-full"><i className="fas fa-trash"></i></button>
+                                        <button onClick={() => handleDeleteUnit(unit.id, false)} className="bg-red-600 text-white w-10 h-10 rounded-full"><i className="fas fa-trash"></i></button>
                                     </div>
                                 </div>
                                 <div className="p-4">
@@ -158,7 +163,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                                     type="number" 
                                                     min="1"
                                                     value={unit.count} 
-                                                    onChange={(e) => handleUpdateUnitCount(unit.id, parseInt(e.target.value))}
+                                                    onChange={(e) => handleUpdateUnitCount(unit.id, parseInt(e.target.value), false)}
                                                     className="w-16 bg-slate-900 border border-slate-600 rounded p-1 text-center text-white font-bold text-lg focus:border-blue-500 outline-none"
                                                 />
                                                 <span className="text-sm font-normal text-slate-500">Adet</span>
@@ -175,22 +180,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </div>
                  </section>
 
-                 {/* 3. SECTION: YAPISAL ELEMANLAR DETAY PANELİ (Modified) */}
+                 {/* 3. SECTION: YAPISAL ELEMANLAR DETAY PANELİ (Structural Floors) */}
                  <section className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl">
-                    <div className="mb-6">
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                            <i className="fas fa-hard-hat text-orange-500"></i> Yapısal Elemanlar Detay Paneli
-                        </h2>
-                        <p className="text-sm text-slate-400 mt-1">Duvar, kolon ve kirişlerin görsel ve manuel metraj yönetimi</p>
+                    <div className="mb-6 flex justify-between items-center">
+                        <div>
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                <i className="fas fa-hard-hat text-orange-500"></i> Yapısal Elemanlar Detay Paneli
+                            </h2>
+                            <p className="text-sm text-slate-400 mt-1">Kat planları bazında duvar, kolon ve kirişlerin görsel/manuel metraj yönetimi</p>
+                        </div>
+                        <button onClick={handleAddStructuralUnit} className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center gap-2 text-sm"><i className="fas fa-plus"></i> Yeni Kat Planı</button>
                     </div>
                     
                     <div className="space-y-3">
-                        {units.length === 0 && <div className="text-slate-500 text-sm text-center py-4">Henüz bir bağımsız bölüm eklenmemiş.</div>}
-                        {units.map(unit => (
-                            <div key={unit.id} className="bg-slate-900/40 border border-slate-700 rounded-lg p-4 flex flex-col justify-between gap-4 hover:bg-slate-900/60 transition">
+                        {structuralUnits.length === 0 && <div className="text-slate-500 text-sm text-center py-4">Henüz bir kat planı eklenmemiş.</div>}
+                        {structuralUnits.map(unit => (
+                            <div key={unit.id} className="bg-slate-900/40 border border-slate-700 rounded-lg p-4 flex flex-col justify-between gap-4 hover:bg-slate-900/60 transition group">
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold border border-slate-600">{unit.name.substring(0,2)}</div>
+                                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold border border-slate-600 group-hover:border-orange-500 group-hover:text-orange-500 transition">{unit.name.substring(0,2)}</div>
                                         <div>
                                             <div className="font-bold text-white text-sm">{unit.name}</div>
                                             <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
@@ -207,20 +215,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                         </div>
                                     </div>
                                     
-                                    {/* Source Toggle */}
-                                    <div className="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700">
-                                        <button 
-                                            onClick={() => handleToggleStructuralSource(unit.id)} 
-                                            className={`px-3 py-1 text-xs font-bold rounded transition ${unit.structuralSource === 'global_calculated' ? 'bg-yellow-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                                        >
-                                            Otomatik
-                                        </button>
-                                        <button 
-                                            onClick={() => handleToggleStructuralSource(unit.id)} 
-                                            className={`px-3 py-1 text-xs font-bold rounded transition ${unit.structuralSource === 'detailed_unit' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                                        >
-                                            Detaylı
-                                        </button>
+                                    <div className="flex items-center gap-4">
+                                        {/* Count Input for Floors */}
+                                        <div className="flex items-center justify-end gap-2">
+                                            <input 
+                                                type="number" 
+                                                min="1"
+                                                value={unit.count} 
+                                                onChange={(e) => handleUpdateUnitCount(unit.id, parseInt(e.target.value), true)}
+                                                className="w-14 bg-slate-950 border border-slate-600 rounded p-1 text-center text-white font-bold text-sm focus:border-orange-500 outline-none"
+                                            />
+                                            <span className="text-xs font-normal text-slate-500">Adet</span>
+                                        </div>
+
+                                        {/* Source Toggle */}
+                                        <div className="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700">
+                                            <button 
+                                                onClick={() => handleToggleStructuralSource(unit.id)} 
+                                                className={`px-3 py-1 text-xs font-bold rounded transition ${unit.structuralSource === 'global_calculated' ? 'bg-yellow-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                                            >
+                                                Otomatik
+                                            </button>
+                                            <button 
+                                                onClick={() => handleToggleStructuralSource(unit.id)} 
+                                                className={`px-3 py-1 text-xs font-bold rounded transition ${unit.structuralSource === 'detailed_unit' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                                            >
+                                                Detaylı
+                                            </button>
+                                        </div>
+                                        
+                                        <button onClick={() => handleDeleteUnit(unit.id, true)} className="text-red-500 hover:text-red-400 px-2"><i className="fas fa-trash"></i></button>
                                     </div>
                                 </div>
                                 
@@ -233,7 +257,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                                 <span><i className="fas fa-grip-lines mr-1 text-blue-600"></i>{unit.beams.length} Kiriş</span>
                                             </>
                                         ) : (
-                                            <span className="italic text-slate-600">Yaklaşık metraj hesaplanıyor...</span>
+                                            <span className="italic text-slate-600">Bu kat için metraj m² üzerinden yaklaşık hesaplanıyor...</span>
                                         )}
                                     </div>
 
@@ -251,7 +275,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </div>
                  </section>
 
-                 {/* 4. SECTION: PROJECT COST DETAILS (Updated) */}
+                 {/* 4. SECTION: PROJECT COST DETAILS */}
                  <section className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl">
                     <div className="mb-6 flex justify-between items-end">
                         <div>

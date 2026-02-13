@@ -27,13 +27,24 @@ export const App = () => {
     setExpandedCategories(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // 1. APARTMENT UNITS (Mimari - Daire Tipleri)
   const [units, setUnits] = useState<UnitType[]>([
       { 
-          id: '1', name: 'Tip A (2+1)', count: 5, rooms: [], walls: [], columns: [], beams: [], 
+          id: 'u1', name: 'Tip A (2+1)', count: 5, rooms: [], walls: [], columns: [], beams: [], 
           floorType: 'normal', imageData: null, scale: 0, lastEdited: Date.now(), 
           structuralSource: 'global_calculated' 
       }
   ]);
+
+  // 2. STRUCTURAL FLOORS (Statik - Kat Planları)
+  const [structuralUnits, setStructuralUnits] = useState<UnitType[]>([
+      {
+          id: 's1', name: 'Normal Kat Planı', count: 5, rooms: [], walls: [], columns: [], beams: [],
+          floorType: 'normal', imageData: null, scale: 0, lastEdited: Date.now(),
+          structuralSource: 'detailed_unit' // Default to detailed for structural plans
+      }
+  ]);
+
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
   
   // State for Manager Modals
@@ -106,13 +117,22 @@ export const App = () => {
     let fitoutCost = 0;
     const details: { id: string, title: string, totalCategoryCost: number, items: any[] }[] = [];
 
-    // Calculate aggregated quantities from all units first (for non-global items)
+    // Calculate aggregated quantities from all units AND structural floors
     const aggregatedQuantities = new Map<string, number>();
     
+    // 1. Process Apartments (Units) - Mostly Architectural & Fitout
     units.forEach(unit => {
         const { quantities } = calculateUnitCost(unit, costs, buildingStats);
         Object.entries(quantities).forEach(([key, val]) => {
             aggregatedQuantities.set(key, (aggregatedQuantities.get(key) || 0) + (val * unit.count));
+        });
+    });
+
+    // 2. Process Structural Floors - Mostly Concrete, Rebar, Walls
+    structuralUnits.forEach(sUnit => {
+        const { quantities } = calculateUnitCost(sUnit, costs, buildingStats);
+        Object.entries(quantities).forEach(([key, val]) => {
+            aggregatedQuantities.set(key, (aggregatedQuantities.get(key) || 0) + (val * sUnit.count));
         });
     });
 
@@ -163,7 +183,7 @@ export const App = () => {
         globalStructuralCost: structuralCost,
         interiorFitoutCost: fitoutCost
     };
-  }, [costs, units, totalConstructionArea, buildingStats]);
+  }, [costs, units, structuralUnits, totalConstructionArea, buildingStats]);
 
   // --- Fetch Prices ---
   useEffect(() => {
@@ -200,7 +220,7 @@ export const App = () => {
     fetchPrices();
   }, []);
 
-  // --- Handlers for Cost Editing ---
+  // --- Handlers ---
   const handleUpdateCostItem = (catId: string, itemName: string, field: 'manualQuantity' | 'manualPrice', value: number | undefined) => {
       setCosts(prevCosts => prevCosts.map(cat => {
           if (cat.id !== catId) return cat;
@@ -214,42 +234,65 @@ export const App = () => {
       }));
   };
 
+  // Add Apartment Unit
   const handleAddUnit = () => {
       const newUnit: UnitType = {
           id: Date.now().toString(),
-          name: `Yeni Tip ${units.length + 1}`,
+          name: `Yeni Daire Tip ${units.length + 1}`,
           floorType: 'normal',
           count: 1,
-          rooms: [],
-          walls: [],
-          columns: [],
-          beams: [],
-          imageData: null,
-          scale: 0,
-          lastEdited: Date.now(),
+          rooms: [], walls: [], columns: [], beams: [],
+          imageData: null, scale: 0, lastEdited: Date.now(),
           structuralSource: 'global_calculated'
       };
       setUnits([...units, newUnit]);
   };
+
+  // Add Structural Floor Plan
+  const handleAddStructuralUnit = () => {
+      const newSUnit: UnitType = {
+          id: 's-' + Date.now().toString(),
+          name: `Yeni Kat Planı ${structuralUnits.length + 1}`,
+          floorType: 'normal',
+          count: 1,
+          rooms: [], walls: [], columns: [], beams: [],
+          imageData: null, scale: 0, lastEdited: Date.now(),
+          structuralSource: 'detailed_unit'
+      };
+      setStructuralUnits([...structuralUnits, newSUnit]);
+  };
   
-  // New handler for updating count directly
-  const handleUpdateUnitCount = (id: string, count: number) => {
-      setUnits(units.map(u => u.id === id ? { ...u, count: Math.max(0, count) } : u));
+  const handleUpdateUnitCount = (id: string, count: number, isStructural: boolean) => {
+      if (isStructural) {
+          setStructuralUnits(structuralUnits.map(u => u.id === id ? { ...u, count: Math.max(0, count) } : u));
+      } else {
+          setUnits(units.map(u => u.id === id ? { ...u, count: Math.max(0, count) } : u));
+      }
   };
 
   const handleToggleStructuralSource = (id: string) => {
-      setUnits(units.map(u => u.id === id ? { 
-          ...u, 
-          structuralSource: u.structuralSource === 'global_calculated' ? 'detailed_unit' : 'global_calculated' 
-      } : u));
+      // Typically used for Structural Plans, but can be for Units too if user wants to draw walls inside units
+      const targetIsStructural = structuralUnits.some(u => u.id === id);
+      if (targetIsStructural) {
+          setStructuralUnits(structuralUnits.map(u => u.id === id ? { 
+            ...u, structuralSource: u.structuralSource === 'global_calculated' ? 'detailed_unit' : 'global_calculated' 
+        } : u));
+      } else {
+          setUnits(units.map(u => u.id === id ? { 
+            ...u, structuralSource: u.structuralSource === 'global_calculated' ? 'detailed_unit' : 'global_calculated' 
+        } : u));
+      }
   };
 
-  // Generalized function to open editor in a specific scope
+  // Generalized function to open editor
   const openEditor = (id: string, scope: 'architectural' | 'structural') => {
-      const unit = units.find(u => u.id === id);
+      // Find in both lists
+      let unit = units.find(u => u.id === id);
+      if (!unit) unit = structuralUnits.find(u => u.id === id);
+      
       if (!unit) return;
 
-      setEditorScope(scope); // Set the active scope
+      setEditorScope(scope);
       setActiveUnitId(id);
       setEditorRooms(unit.rooms || []);
       setEditorWalls(unit.walls || []);
@@ -278,16 +321,19 @@ export const App = () => {
   const handleEditUnitArchitectural = (id: string) => openEditor(id, 'architectural');
   const handleEditUnitStructural = (id: string) => openEditor(id, 'structural');
 
-  const handleDeleteUnit = (id: string) => {
+  const handleDeleteUnit = (id: string, isStructural: boolean) => {
       if (confirm('Silmek istediğinize emin misiniz?')) {
-          setUnits(units.filter(u => u.id !== id));
+          if (isStructural) {
+              setStructuralUnits(structuralUnits.filter(u => u.id !== id));
+          } else {
+              setUnits(units.filter(u => u.id !== id));
+          }
       }
   };
 
   const saveAndExitEditor = () => {
       if (activeUnitId) {
-          setUnits(units.map(u => u.id === activeUnitId ? {
-              ...u,
+          const updatedData = {
               rooms: editorRooms,
               walls: editorWalls,
               columns: editorColumns,
@@ -295,14 +341,27 @@ export const App = () => {
               scale: editorScale,
               imageData: editorImage ? editorImage.src : null,
               lastEdited: Date.now()
-          } : u));
+          };
+
+          // Try updating units first
+          if (units.some(u => u.id === activeUnitId)) {
+             setUnits(units.map(u => u.id === activeUnitId ? { ...u, ...updatedData } : u));
+          } 
+          // Else update structural units
+          else if (structuralUnits.some(u => u.id === activeUnitId)) {
+             setStructuralUnits(structuralUnits.map(u => u.id === activeUnitId ? { ...u, ...updatedData } : u));
+          }
       }
       setView('dashboard');
       setActiveUnitId(null);
   };
   
   const handleUpdateUnit = (updatedUnit: UnitType) => {
-      setUnits(units.map(u => u.id === updatedUnit.id ? updatedUnit : u));
+      if (units.some(u => u.id === updatedUnit.id)) {
+        setUnits(units.map(u => u.id === updatedUnit.id ? updatedUnit : u));
+      } else {
+        setStructuralUnits(structuralUnits.map(u => u.id === updatedUnit.id ? updatedUnit : u));
+      }
   };
 
   // --- Heat Zone Logic ---
@@ -343,10 +402,12 @@ export const App = () => {
   // --- Editor Logic ---
   useEffect(() => {
     if (view !== 'editor') return;
+    const currentUnit = units.find(u=>u.id===activeUnitId) || structuralUnits.find(u=>u.id===activeUnitId);
+
     const tempUnit: UnitType = {
         id: 'temp', name: 'temp', count: 1, 
         rooms: editorRooms, walls: editorWalls, columns: editorColumns, beams: editorBeams,
-        floorType: units.find(u=>u.id===activeUnitId)?.floorType || 'normal',
+        floorType: currentUnit?.floorType || 'normal',
         imageData: null, scale: editorScale, lastEdited: 0,
         structuralSource: editorScope === 'structural' ? 'detailed_unit' : 'global_calculated' // Temporary for calc
     };
@@ -356,7 +417,7 @@ export const App = () => {
     const { quantities, stats } = calculateUnitCost(tempUnit, costs, buildingStats);
     setEditorQuantities(quantities);
     setEditorStats(stats);
-  }, [editorRooms, editorWalls, editorColumns, editorBeams, editorScale, view, costs, buildingStats, activeUnitId, editorScope]);
+  }, [editorRooms, editorWalls, editorColumns, editorBeams, editorScale, view, costs, buildingStats, activeUnitId, editorScope, units, structuralUnits]);
 
 
   // ... (Keep Image Upload) ...
@@ -641,9 +702,11 @@ export const App = () => {
             interiorFitoutCost={interiorFitoutCost}
             projectCostDetails={projectCostDetails}
             units={units}
+            structuralUnits={structuralUnits}
             expandedCategories={expandedCategories}
             toggleCategory={toggleCategory}
             handleAddUnit={handleAddUnit}
+            handleAddStructuralUnit={handleAddStructuralUnit}
             handleEditUnit={handleEditUnitArchitectural}
             handleEditUnitStructural={handleEditUnitStructural}
             handleDeleteUnit={handleDeleteUnit}
@@ -656,7 +719,7 @@ export const App = () => {
         />
       ) : (
         <EditorView 
-            unit={units.find(u => u.id === activeUnitId)}
+            unit={units.find(u => u.id === activeUnitId) || structuralUnits.find(u => u.id === activeUnitId)}
             editorScale={editorScale}
             editorImage={editorImage}
             saveAndExitEditor={saveAndExitEditor}
@@ -709,7 +772,7 @@ export const App = () => {
       
       {structuralManagerUnitId && (
         <StructuralManagerModal
-            unit={units.find(u => u.id === structuralManagerUnitId)!}
+            unit={units.find(u => u.id === structuralManagerUnitId) || structuralUnits.find(u => u.id === structuralManagerUnitId)!}
             onClose={() => setStructuralManagerUnitId(null)}
             onUpdateUnit={handleUpdateUnit}
         />
