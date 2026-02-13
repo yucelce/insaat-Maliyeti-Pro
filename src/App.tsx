@@ -206,7 +206,7 @@ export const App = () => {
         try {
             // Update this URL with your actual Wix Http Function URL
             // e.g. https://your-site.com/_functions/get_fiyatListesi
-            const WIX_API_URL = 'https://your-wix-site-url.com/_functions/get_fiyatListesi'; 
+            const WIX_API_URL = 'https://celikyucel.com/_functions/get_fiyatListesi'; 
             const response = await fetch(WIX_API_URL);
             
             if (response.ok) {
