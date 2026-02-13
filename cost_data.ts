@@ -7,6 +7,7 @@ export interface CostItem {
   multiplier: number;
   wixId?: string; // ID mapping for Wix Backend
   manualQuantity?: number; // User override for quantity
+  manualPrice?: number; // User override for unit price
 }
 
 export interface CostCategory {
