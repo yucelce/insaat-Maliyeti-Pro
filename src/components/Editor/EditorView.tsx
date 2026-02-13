@@ -453,5 +453,6 @@ export const EditorView: React.FC<EditorViewProps> = ({
             </div>
         </div>
       </div>
+    </div>
     );
 };
