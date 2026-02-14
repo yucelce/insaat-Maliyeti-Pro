@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { UnitType, Room, Wall, Column, Beam, Point } from '../../types';
 import { CostCategory } from '../../../cost_data';
 import { isPointInPolygon } from '../../utils/geometry';
+import { CostSummaryPanel } from '../Shared/CostSummaryPanel';
 
 interface EditorViewProps {
     unit: UnitType | undefined;
@@ -40,6 +41,7 @@ interface EditorViewProps {
     calibrationPoints: Point[];
     cursorPos: Point | null;
     editorScope: 'architectural' | 'structural';
+    handleUpdateCostItem: (catId: string, itemName: string, field: 'manualQuantity' | 'manualPrice', value: number | undefined) => void;
 }
 
 export const EditorView: React.FC<EditorViewProps> = ({
@@ -78,7 +80,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
     drawingWallStart,
     calibrationPoints,
     cursorPos,
-    editorScope
+    editorScope,
+    handleUpdateCostItem
 }) => {
     
     // Canvas Drawing Logic
@@ -407,51 +410,14 @@ export const EditorView: React.FC<EditorViewProps> = ({
         </div>
 
         {/* Right Cost Panel */}
-        <div className="w-80 bg-slate-900 border-l border-slate-800 flex flex-col z-20 shadow-2xl">
-            <div className="p-3 bg-slate-900 border-b border-slate-800 shadow-lg z-10">
-                <h2 className="font-bold text-white text-xs flex items-center gap-2"><i className="fas fa-calculator text-blue-500"></i> Maliyet Özeti</h2>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-3 custom-scrollbar">
-                
-                {editorScope === 'structural' && (
-                <div className="border border-slate-700 rounded bg-slate-800/30">
-                    <div className="bg-slate-800 px-3 py-2 text-[10px] font-bold text-slate-300 uppercase tracking-wider border-b border-slate-700">Kaba Yapı Metrajı</div>
-                    <div className="p-2 space-y-2">
-                        <div className="flex justify-between text-[10px] text-slate-400"><span>Kolon Hacim (C30)</span><span className="text-white font-mono">{editorStats?.column_concrete_volume?.toFixed(2)} m3</span></div>
-                        <div className="flex justify-between text-[10px] text-slate-400"><span>Kolon Kalıp</span><span className="text-white font-mono">{editorStats?.column_formwork_area?.toFixed(2)} m2</span></div>
-                        <div className="h-px bg-slate-700/50 my-1"></div>
-                        <div className="flex justify-between text-[10px] text-slate-400"><span>Kiriş Hacim (C30)</span><span className="text-white font-mono">{editorStats?.beam_concrete_volume?.toFixed(2)} m3</span></div>
-                        <div className="flex justify-between text-[10px] text-slate-400"><span>Kiriş Kalıp</span><span className="text-white font-mono">{editorStats?.beam_formwork_area?.toFixed(2)} m2</span></div>
-                    </div>
-                </div>
-                )}
-
-                {costs.map((category) => {
-                    // Filter costs based on scope
-                    if (editorScope === 'architectural' && category.id === 'kaba_insaat') return null;
-                    if (editorScope === 'structural' && category.id !== 'kaba_insaat' && category.id !== 'duvar_tavan') return null;
-
-                    return (
-                        <div key={category.id} className="border border-slate-700 rounded bg-slate-800/30">
-                            <div className="bg-slate-800 px-3 py-2 text-[10px] font-bold text-slate-300 uppercase tracking-wider border-b border-slate-700">{category.title}</div>
-                            <div className="p-2 space-y-1">
-                                {category.items.map((item) => (
-                                    <div key={item.name} className="flex flex-col text-[10px] border-b border-slate-700/50 pb-1 last:border-0">
-                                        <div className="flex justify-between items-center mb-0.5"><span className="text-slate-300">{item.name}</span></div>
-                                        <div className="flex items-center gap-1 justify-end">
-                                            <span className="font-mono text-slate-400">{editorQuantities[item.name]?.toLocaleString() || 0}</span>
-                                            <span className="text-[9px] text-slate-500 w-6">{item.unit}</span>
-                                            <span className="text-[9px] text-slate-600">x</span>
-                                            <span className="font-bold text-green-400">{((editorQuantities[item.name] || 0) * item.unit_price).toLocaleString('tr-TR', {maximumFractionDigits: 0})}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
+        <CostSummaryPanel 
+            unit={unit}
+            costs={costs}
+            quantities={editorQuantities}
+            scope={editorScope}
+            onUpdateCostItem={handleUpdateCostItem}
+            structuralStats={editorStats}
+        />
       </div>
     </div>
     );

@@ -1,13 +1,26 @@
-import React, { useState } from 'react';
-import { UnitType, Room, RoomType, RoomProperties } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { UnitType, Room, RoomType, RoomProperties, BuildingStats } from '../../types';
+import { CostCategory } from '../../../cost_data';
+import { calculateUnitCost } from '../../utils/calculations';
+import { CostSummaryPanel } from '../Shared/CostSummaryPanel';
 
 interface RoomManagerModalProps {
     unit: UnitType;
     onClose: () => void;
     onUpdateUnit: (updatedUnit: UnitType) => void;
+    costs: CostCategory[];
+    buildingStats: BuildingStats;
+    onUpdateCostItem: (catId: string, itemName: string, field: 'manualPrice', value: number | undefined) => void;
 }
 
-export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({ unit, onClose, onUpdateUnit }) => {
+export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({ 
+    unit, 
+    onClose, 
+    onUpdateUnit, 
+    costs, 
+    buildingStats, 
+    onUpdateCostItem 
+}) => {
     // Default form state
     const [form, setForm] = useState<{
         name: string;
@@ -32,6 +45,11 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({ unit, onClos
         wall: 'boya',
         cornice: true
     });
+
+    // Calculate Costs on the fly based on current unit state
+    const { quantities } = useMemo(() => {
+        return calculateUnitCost(unit, costs, buildingStats);
+    }, [unit, costs, buildingStats]);
 
     const handleTypeChange = (type: RoomType) => {
         let defaultName = '';
@@ -118,7 +136,7 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({ unit, onClos
 
     return (
         <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center backdrop-blur-sm p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-5xl flex flex-col h-[85vh]">
+            <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-[95vw] flex flex-col h-[90vh]">
                 <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
                     <div>
                         <h3 className="text-white font-bold text-lg">{unit.name} - Oda & Mahal Listesi</h3>
@@ -224,7 +242,7 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({ unit, onClos
                         </button>
                     </div>
 
-                    {/* RIGHT: List Area */}
+                    {/* CENTER: List Area */}
                     <div className="flex-1 bg-slate-800/20 flex flex-col">
                         <div className="p-4 bg-slate-800/50 border-b border-slate-700 flex justify-between items-center">
                             <span className="text-sm font-bold text-slate-300">Ekli Odalar ({unit.rooms.length})</span>
@@ -291,6 +309,15 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({ unit, onClos
                              )}
                         </div>
                     </div>
+
+                    {/* RIGHT: Cost Summary Panel */}
+                    <CostSummaryPanel 
+                        unit={unit}
+                        costs={costs}
+                        quantities={quantities}
+                        scope="architectural"
+                        onUpdateCostItem={onUpdateCostItem}
+                    />
                 </div>
                 <div className="p-4 border-t border-slate-700 bg-slate-800/50 flex justify-end">
                     <button onClick={onClose} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold shadow-lg">Tamam</button>

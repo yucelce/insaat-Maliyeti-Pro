@@ -788,6 +788,7 @@ export const App = () => {
             calibrationPoints={calibrationPoints}
             cursorPos={cursorPos}
             editorScope={editorScope}
+            handleUpdateCostItem={handleUpdateCostItem}
         />
       )}
 
@@ -816,6 +817,9 @@ export const App = () => {
             unit={units.find(u => u.id === roomManagerUnitId)!}
             onClose={() => setRoomManagerUnitId(null)}
             onUpdateUnit={handleUpdateUnit}
+            costs={costs}
+            buildingStats={buildingStats}
+            onUpdateCostItem={handleUpdateCostItem}
         />
       )}
 
