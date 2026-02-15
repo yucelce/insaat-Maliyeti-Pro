@@ -167,15 +167,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 if (item.auto_source !== 'manual') {
                     autoQty = aggregatedQuantities.get(item.name) || 0;
                     
-                    if (autoQty === 0 && item.auto_source === 'total_area' && item.scope === 'global') {
-                        const isConcreteOrIron = ['Betonarme Betonu (C30)', 'İnşaat Demiri', 'Kalıp İşçiliği & Malzeme'].includes(item.name);
-                        if (!isConcreteOrIron) {
-                             autoQty = totalConstructionArea * item.multiplier;
+                    if (autoQty === 0 && item.scope === 'global') {
+                        if (item.auto_source === 'total_area') {
+                             const isConcreteOrIron = ['Betonarme Betonu (C30)', 'İnşaat Demiri', 'Kalıp İşçiliği & Malzeme'].includes(item.name);
+                             if (!isConcreteOrIron) {
+                                  autoQty = totalConstructionArea * item.multiplier;
+                             }
+                        } else if (item.auto_source === 'land_area') {
+                             autoQty = buildingStats.landArea * item.multiplier;
                         }
                     }
                 }
 
-                const finalQty = item.manualQuantity !== undefined ? item.manualQuantity : autoQty;
+                // Handling for 'manual_total' (Lump Sum) items
+                // Force quantity to 1 if it's a manual total input style, so price acts as total
+                let finalQty = item.manualQuantity !== undefined ? item.manualQuantity : autoQty;
+                
+                if (item.inputType === 'manual_total') {
+                    finalQty = 1;
+                }
+
                 const finalPrice = item.manualPrice !== undefined ? item.manualPrice : item.unit_price;
                 const totalPrice = finalQty * finalPrice;
                 categoryTotal += totalPrice;

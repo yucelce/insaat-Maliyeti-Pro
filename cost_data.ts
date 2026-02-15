@@ -1,3 +1,4 @@
+
 export interface CostItem {
   name: string;
   unit: string;
@@ -5,13 +6,15 @@ export interface CostItem {
   // auto_source determines how the default quantity is calculated
   // 'manual': Quantity must be entered by user
   // 'total_area': Multiplied by Total Construction Area (m2)
+  // 'land_area': Multiplied by Land Area (m2)
   // 'net_wall_area', etc.: Derived from Editor drawings
-  auto_source: 'total_area' | 'total_perimeter' | 'dry_area' | 'wet_area' | 'dry_perimeter' | 'wall_surface_area' | 'net_wall_area' | 'cornice_length' | 'manual' | 'wall_gazbeton_area' | 'wall_tugla_area' | 'wall_briket_area';
+  auto_source: 'total_area' | 'land_area' | 'total_perimeter' | 'dry_area' | 'wet_area' | 'dry_perimeter' | 'wall_surface_area' | 'net_wall_area' | 'cornice_length' | 'manual' | 'wall_gazbeton_area' | 'wall_tugla_area' | 'wall_briket_area';
   multiplier: number; // Applied to the auto_source value
   wixId?: string; // ID mapping for Wix Backend
   manualQuantity?: number; // User override for quantity
   manualPrice?: number; // User override for unit price
   scope?: 'global' | 'unit'; // Determines if item is per-unit or project-wide
+  inputType?: 'quantity_x_price' | 'manual_total'; // New: Determines UI input style. 'manual_total' hides quantity, treats price as total.
 }
 
 export interface CostCategory {
@@ -26,17 +29,23 @@ export const COST_DATA: CostCategory[] = [
     id: "resmi_idari",
     title: "1. Projelendirme ve Resmi Giderler",
     items: [
-      { name: "Mimari Proje", unit: "Adet", unit_price: 25000, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Mimari Proje", unit: "Paket", unit_price: 25000, auto_source: "total_area", multiplier: 1, scope: 'global' },
       { name: "Statik Proje", unit: "m2", unit_price: 45, auto_source: "total_area", multiplier: 1, scope: 'global' },
       { name: "Mekanik Proje", unit: "m2", unit_price: 35, auto_source: "total_area", multiplier: 1, scope: 'global' },
       { name: "Elektrik Projesi", unit: "m2", unit_price: 35, auto_source: "total_area", multiplier: 1, scope: 'global' },
-      { name: "Zemin Etüdü", unit: "Adet", unit_price: 15000, auto_source: "manual", multiplier: 1, scope: 'global' },
-      { name: "Haritacı Ücreti (Lihkab)", unit: "Adet", unit_price: 8000, auto_source: "manual", multiplier: 1, scope: 'global' },
-      { name: "Akustik Rapor", unit: "Adet", unit_price: 5000, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Zemin Etüdü", unit: "Paket", unit_price: 15000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Haritacı Ücreti (Lihkab)", unit: "Paket", unit_price: 8000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Akustik Rapor", unit: "Paket", unit_price: 5000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Yapı Denetim Hizmet Bedeli", unit: "m2", unit_price: 150, auto_source: "total_area", multiplier: 1, scope: 'global' },
-      { name: "Ruhsat ve İskan Harçları", unit: "Adet", unit_price: 50000, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Ruhsat ve İskan Harçları", unit: "Toplam", unit_price: 50000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Şantiye Şefi (Aylık)", unit: "Ay", unit_price: 20000, auto_source: "manual", multiplier: 1, scope: 'global' },
-      { name: "Enerji Kimlik Belgesi", unit: "Adet", unit_price: 3000, auto_source: "manual", multiplier: 1, scope: 'global' }
+      { name: "Enerji Kimlik Belgesi", unit: "Paket", unit_price: 3000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      // NEW ITEMS
+      { name: "Şantiye Su ve Elektrik Abonelikleri", unit: "Toplam", unit_price: 15000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Tapu Harçları ve Noter Masrafları", unit: "Toplam", unit_price: 35000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Arsa Rayiç Bedeli (Maliyet)", unit: "m2", unit_price: 1000, auto_source: "land_area", multiplier: 1, scope: 'global' },
+      { name: "Emlak Vergisi Tutarı", unit: "Toplam", unit_price: 5000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Yeşil Etiket (Asansör Ruhsat)", unit: "Toplam", unit_price: 5000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' }
     ]
   },
 
@@ -50,7 +59,13 @@ export const COST_DATA: CostCategory[] = [
       { name: "Şantiye Çiti (Çevirme)", unit: "mt", unit_price: 350, auto_source: "manual", multiplier: 1, scope: 'global' },
       { name: "Konteyner (Ofis/Depo)", unit: "Adet", unit_price: 65000, auto_source: "manual", multiplier: 1, scope: 'global' },
       { name: "Şantiye Elektrik/Su Tüketimi", unit: "Ay", unit_price: 5000, auto_source: "manual", multiplier: 1, scope: 'global' },
-      { name: "Su Drenaj Sistemi", unit: "mt", unit_price: 450, auto_source: "manual", multiplier: 1, scope: 'global' }
+      { name: "Su Drenaj Sistemi", unit: "mt", unit_price: 450, auto_source: "manual", multiplier: 1, scope: 'global' },
+      // NEW ITEMS
+      { name: "Kırıcı İş Makinesi Farkı (Kayalık)", unit: "Saat", unit_price: 3500, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Püskürtme Beton (İksa)", unit: "m2", unit_price: 650, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Vinç Kirası (Kule/Mobil)", unit: "Ay", unit_price: 75000, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Şantiye Araç Giderleri (Aylık)", unit: "Ay", unit_price: 25000, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Şantiye Personel Giderleri (Bekçi vb.)", unit: "Ay", unit_price: 35000, auto_source: "manual", multiplier: 1, scope: 'global' }
     ]
   },
 
@@ -64,7 +79,9 @@ export const COST_DATA: CostCategory[] = [
       { name: "Kalıp İşçiliği & Malzeme", unit: "m2", unit_price: 850, auto_source: "total_area", multiplier: 2.6, wixId: "kalipdemirbetonisc", scope: 'global' },
       { name: "Temel Su Yalıtımı (Bohçalama)", unit: "m2", unit_price: 450, auto_source: "total_area", multiplier: 0.25, scope: 'global' },
       { name: "Çatı Konstrüksiyon ve Kaplama", unit: "m2", unit_price: 2200, auto_source: "total_area", multiplier: 0.25, scope: 'global' },
-      { name: "Asansör Kuyu ve Ray İşleri", unit: "Adet", unit_price: 45000, auto_source: "manual", multiplier: 1, scope: 'global' }
+      { name: "Asansör Kuyu ve Ray İşleri", unit: "Adet", unit_price: 45000, auto_source: "manual", multiplier: 1, scope: 'global' },
+      // NEW ITEMS
+      { name: "Balkon ve Teras Su Yalıtımı", unit: "m2", unit_price: 350, auto_source: "total_area", multiplier: 0.15, scope: 'global' }
     ]
   },
 
@@ -81,7 +98,9 @@ export const COST_DATA: CostCategory[] = [
       { name: "İç Cephe Boyası", unit: "m2", unit_price: 250, auto_source: "net_wall_area", multiplier: 1, wixId: "boyamal", scope: 'unit' },
       { name: "Tavan Boyası", unit: "m2", unit_price: 180, auto_source: "total_area", multiplier: 1, wixId: "tavanboyamal", scope: 'unit' },
       { name: "Asma Tavan (Alçıpan)", unit: "m2", unit_price: 650, auto_source: "manual", multiplier: 1, scope: 'unit' },
-      { name: "Kartonpiyer / Stropiyer", unit: "mt", unit_price: 120, auto_source: "cornice_length", multiplier: 1, wixId: "alcikartonpiyermalisc", scope: 'unit' }
+      { name: "Kartonpiyer / Stropiyer", unit: "mt", unit_price: 120, auto_source: "cornice_length", multiplier: 1, wixId: "alcikartonpiyermalisc", scope: 'unit' },
+      // NEW ITEMS
+      { name: "Duvar Örme Harcı ve Yapıştırıcı", unit: "Torba", unit_price: 150, auto_source: "net_wall_area", multiplier: 0.2, scope: 'unit' }
     ]
   },
 
@@ -94,7 +113,12 @@ export const COST_DATA: CostCategory[] = [
       { name: "Dış Cephe Boyası/Kaplama", unit: "m2", unit_price: 450, auto_source: "total_area", multiplier: 1.2, scope: 'global' },
       { name: "PVC Pencere (Doğrama)", unit: "m2", unit_price: 4500, auto_source: "manual", multiplier: 0, scope: 'global' }, // Usually calculated per hole but often global contract
       { name: "Mermer Denizlik", unit: "mt", unit_price: 750, auto_source: "manual", multiplier: 0, scope: 'global' },
-      { name: "Balkon Korkulukları (Alüminyum)", unit: "mt", unit_price: 1800, auto_source: "manual", multiplier: 0, scope: 'global' }
+      { name: "Balkon Korkulukları (Alüminyum)", unit: "mt", unit_price: 1800, auto_source: "manual", multiplier: 0, scope: 'global' },
+      // NEW ITEMS
+      { name: "İskele Kirası (Aylık)", unit: "Ay", unit_price: 15000, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Cam Balkon Sistemleri", unit: "m2", unit_price: 3500, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Giydirme Cephe (Kompozit vb.)", unit: "m2", unit_price: 2800, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Pencere Söveleri", unit: "mt", unit_price: 120, auto_source: "manual", multiplier: 1, scope: 'global' }
     ]
   },
 
@@ -108,7 +132,12 @@ export const COST_DATA: CostCategory[] = [
       { name: "Seramik Kaplama (Banyo/Koridor)", unit: "m2", unit_price: 1100, auto_source: "wet_area", multiplier: 1, wixId: "seramikmal", scope: 'unit' },
       { name: "Merdiven Mermer Kaplama", unit: "Basamak", unit_price: 1500, auto_source: "manual", multiplier: 1, scope: 'global' }, // Stairs are usually common area
       { name: "Merdiven Korkuluğu", unit: "mt", unit_price: 1800, auto_source: "manual", multiplier: 1, scope: 'global' },
-      { name: "Süpürgelik", unit: "mt", unit_price: 150, auto_source: "dry_perimeter", multiplier: 1, scope: 'unit' }
+      { name: "Süpürgelik", unit: "mt", unit_price: 150, auto_source: "dry_perimeter", multiplier: 1, scope: 'unit' },
+      // NEW ITEMS
+      { name: "Mermer Harcı ve Kumu", unit: "m3", unit_price: 1200, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Yangın Merdiveni (Çelik)", unit: "Toplam", unit_price: 45000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Seramik Yapıştırıcısı", unit: "Torba", unit_price: 180, auto_source: "wet_area", multiplier: 0.3, scope: 'unit' },
+      { name: "Seramik Derz Dolgusu", unit: "Paket", unit_price: 120, auto_source: "wet_area", multiplier: 0.05, scope: 'unit' }
     ]
   },
 
@@ -124,7 +153,15 @@ export const COST_DATA: CostCategory[] = [
       { name: "Banyo Dolabı & Lavabo", unit: "Adet", unit_price: 6000, auto_source: "manual", multiplier: 0, scope: 'unit' },
       { name: "Klozet Takımı (Gömme Rezervuar)", unit: "Adet", unit_price: 7500, auto_source: "manual", multiplier: 0, scope: 'unit' },
       { name: "Duşakabin", unit: "Adet", unit_price: 5500, auto_source: "manual", multiplier: 0, scope: 'unit' },
-      { name: "Batarya Grubu (Mutfak/Banyo)", unit: "Set", unit_price: 4500, auto_source: "manual", multiplier: 0, scope: 'unit' }
+      { name: "Batarya Grubu (Mutfak/Banyo)", unit: "Set", unit_price: 4500, auto_source: "manual", multiplier: 0, scope: 'unit' },
+      // NEW ITEMS
+      { name: "Bina Giriş Kapısı (Ana)", unit: "Adet", unit_price: 35000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Portmanto", unit: "Adet", unit_price: 12000, auto_source: "manual", multiplier: 0, scope: 'unit' },
+      { name: "İç Merdiven (Dubleks)", unit: "Adet", unit_price: 25000, auto_source: "manual", multiplier: 0, scope: 'unit' },
+      { name: "Davlumbaz/Aspiratör", unit: "Adet", unit_price: 5000, auto_source: "manual", multiplier: 0, scope: 'unit' },
+      { name: "Mutfak Evyesi", unit: "Adet", unit_price: 3500, auto_source: "manual", multiplier: 0, scope: 'unit' },
+      { name: "Evye Bataryası", unit: "Adet", unit_price: 2500, auto_source: "manual", multiplier: 0, scope: 'unit' },
+      { name: "Duş Seti (Başlık/Hortum)", unit: "tk", unit_price: 1500, auto_source: "manual", multiplier: 0, scope: 'unit' }
     ]
   },
 
@@ -137,10 +174,15 @@ export const COST_DATA: CostCategory[] = [
       { name: "Isıtma Tesisatı (Mobil Sistem)", unit: "m2", unit_price: 450, auto_source: "total_area", multiplier: 1, scope: 'unit' },
       { name: "Kombi ve Montajı", unit: "Adet", unit_price: 35000, auto_source: "manual", multiplier: 0, scope: 'unit' },
       { name: "Panel Radyatör", unit: "mt", unit_price: 3500, auto_source: "manual", multiplier: 0, scope: 'unit' },
-      { name: "Doğalgaz Kolon Tesisatı", unit: "Adet", unit_price: 45000, auto_source: "manual", multiplier: 0, scope: 'global' },
-      { name: "Asansör (10 Kişilik Paket)", unit: "Adet", unit_price: 650000, auto_source: "manual", multiplier: 0, scope: 'global' },
+      { name: "Doğalgaz Kolon Tesisatı", unit: "Adet", unit_price: 45000, auto_source: "manual", multiplier: 0, scope: 'global', inputType: 'manual_total' },
+      { name: "Asansör (Paket)", unit: "Toplam", unit_price: 650000, auto_source: "manual", multiplier: 0, scope: 'global', inputType: 'manual_total' },
       { name: "Yangın Dolabı ve Tesisatı", unit: "Adet", unit_price: 15000, auto_source: "manual", multiplier: 0, scope: 'global' },
-      { name: "Su Deposu ve Hidrofor", unit: "Paket", unit_price: 45000, auto_source: "manual", multiplier: 1, scope: 'global' }
+      { name: "Su Deposu ve Hidrofor", unit: "Paket", unit_price: 45000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      // NEW ITEMS
+      { name: "Klima Altyapısı ve Cihazı", unit: "Adet", unit_price: 25000, auto_source: "manual", multiplier: 0, scope: 'unit' },
+      { name: "Radyatör Montaj İşçiliği", unit: "Adet", unit_price: 500, auto_source: "manual", multiplier: 0, scope: 'unit' },
+      { name: "Yangın Su Deposu", unit: "Toplam", unit_price: 25000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Yangın Hidroforu", unit: "Toplam", unit_price: 18000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' }
     ]
   },
 
@@ -153,8 +195,12 @@ export const COST_DATA: CostCategory[] = [
       { name: "Anahtar ve Priz Grupları", unit: "Adet", unit_price: 150, auto_source: "manual", multiplier: 0, scope: 'unit' },
       { name: "Sigorta Panosu ve Şalt Malz.", unit: "Adet", unit_price: 8500, auto_source: "manual", multiplier: 0, scope: 'unit' },
       { name: "Görüntülü Diafon Sistemi", unit: "Daire", unit_price: 4500, auto_source: "manual", multiplier: 0, scope: 'unit' },
-      { name: "Merkezi Uydu Sistemi", unit: "Paket", unit_price: 15000, auto_source: "manual", multiplier: 1, scope: 'global' },
-      { name: "Kamera ve Güvenlik Altyapısı", unit: "Paket", unit_price: 25000, auto_source: "manual", multiplier: 1, scope: 'global' }
+      { name: "Merkezi Uydu Sistemi", unit: "Paket", unit_price: 15000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Kamera ve Güvenlik Altyapısı", unit: "Paket", unit_price: 25000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      // NEW ITEMS
+      { name: "Cephe Aydınlatma (Wallwasher)", unit: "mt", unit_price: 1200, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Jeneratör (Ortak Alan)", unit: "Toplam", unit_price: 150000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Şantiye Elektrik Panosu (Geçici)", unit: "Toplam", unit_price: 12000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' }
     ]
   }
 ];

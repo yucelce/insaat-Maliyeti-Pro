@@ -379,50 +379,21 @@ export const DashboardView: React.FC = () => {
                                                         <div className="font-bold text-green-600 dark:text-green-400 text-sm">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</div>
                                                     </div>
                                                     
-                                                    <div className="flex items-center gap-2">
-                                                        {/* Quantity Input */}
-                                                        <div className="flex-1">
+                                                    {item.inputType === 'manual_total' ? (
+                                                        // --- MANUAL TOTAL UI ---
+                                                        <div className="mt-2">
                                                             <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded relative">
                                                                 <input 
                                                                     type="number" 
-                                                                    className="w-full bg-transparent text-slate-800 dark:text-white text-xs p-1.5 outline-none focus:bg-slate-50 dark:focus:bg-slate-800 transition font-mono text-right pr-8"
-                                                                    value={item.manualQuantity !== undefined ? item.manualQuantity : Math.round(item.calculatedAutoQty * 100)/100}
-                                                                    onChange={(e) => updateCostItem(category.id, item.name, 'manualQuantity', parseFloat(e.target.value))}
-                                                                    placeholder="Miktar"
-                                                                />
-                                                                <span className="absolute right-2 text-[9px] text-slate-500">{item.unit}</span>
-                                                            </div>
-                                                            <div className="flex justify-between mt-1 px-1">
-                                                                <span className="text-[9px] text-slate-500 uppercase">Metraj</span>
-                                                                {item.manualQuantity !== undefined ? (
-                                                                    <button 
-                                                                        onClick={() => updateCostItem(category.id, item.name, 'manualQuantity', undefined)}
-                                                                        className="text-[9px] text-yellow-600 dark:text-yellow-500 hover:text-yellow-500 uppercase font-bold"
-                                                                    >
-                                                                        Otomatik Yap
-                                                                    </button>
-                                                                ) : (
-                                                                    <span className="text-[9px] text-blue-600 dark:text-blue-500 uppercase font-bold">Otomatik</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        <span className="text-slate-400 text-xs">x</span>
-
-                                                        {/* Price Input */}
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded relative">
-                                                                <input 
-                                                                    type="number" 
-                                                                    className="w-full bg-transparent text-slate-800 dark:text-white text-xs p-1.5 outline-none focus:bg-slate-50 dark:focus:bg-slate-800 transition font-mono text-right pr-6"
+                                                                    className="w-full bg-transparent text-slate-800 dark:text-white text-xs p-2 outline-none focus:bg-slate-50 dark:focus:bg-slate-800 transition font-mono text-right pr-8 font-bold text-yellow-600 dark:text-yellow-400"
                                                                     value={item.manualPrice !== undefined ? item.manualPrice : item.unit_price}
                                                                     onChange={(e) => updateCostItem(category.id, item.name, 'manualPrice', parseFloat(e.target.value))}
-                                                                    placeholder="Fiyat"
+                                                                    placeholder="Toplam Tutar"
                                                                 />
                                                                 <span className="absolute right-2 text-[9px] text-slate-500">₺</span>
                                                             </div>
-                                                            <div className="flex justify-between mt-1 px-1">
-                                                                <span className="text-[9px] text-slate-500 uppercase">Birim Fiyat</span>
+                                                            <div className="flex justify-end mt-1 px-1">
+                                                                <span className="text-[9px] text-slate-400 uppercase mr-auto">Götürü Bedel</span>
                                                                 {item.manualPrice !== undefined && (
                                                                     <button 
                                                                         onClick={() => updateCostItem(category.id, item.name, 'manualPrice', undefined)}
@@ -433,7 +404,64 @@ export const DashboardView: React.FC = () => {
                                                                 )}
                                                             </div>
                                                         </div>
-                                                    </div>
+                                                    ) : (
+                                                        // --- STANDARD QTY x PRICE UI ---
+                                                        <div className="flex items-center gap-2">
+                                                            {/* Quantity Input */}
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded relative">
+                                                                    <input 
+                                                                        type="number" 
+                                                                        className="w-full bg-transparent text-slate-800 dark:text-white text-xs p-1.5 outline-none focus:bg-slate-50 dark:focus:bg-slate-800 transition font-mono text-right pr-8"
+                                                                        value={item.manualQuantity !== undefined ? item.manualQuantity : Math.round(item.calculatedAutoQty * 100)/100}
+                                                                        onChange={(e) => updateCostItem(category.id, item.name, 'manualQuantity', parseFloat(e.target.value))}
+                                                                        placeholder="Miktar"
+                                                                    />
+                                                                    <span className="absolute right-2 text-[9px] text-slate-500">{item.unit}</span>
+                                                                </div>
+                                                                <div className="flex justify-between mt-1 px-1">
+                                                                    <span className="text-[9px] text-slate-500 uppercase">Metraj</span>
+                                                                    {item.manualQuantity !== undefined ? (
+                                                                        <button 
+                                                                            onClick={() => updateCostItem(category.id, item.name, 'manualQuantity', undefined)}
+                                                                            className="text-[9px] text-yellow-600 dark:text-yellow-500 hover:text-yellow-500 uppercase font-bold"
+                                                                        >
+                                                                            Otomatik Yap
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="text-[9px] text-blue-600 dark:text-blue-500 uppercase font-bold">Otomatik</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            <span className="text-slate-400 text-xs">x</span>
+
+                                                            {/* Price Input */}
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded relative">
+                                                                    <input 
+                                                                        type="number" 
+                                                                        className="w-full bg-transparent text-slate-800 dark:text-white text-xs p-1.5 outline-none focus:bg-slate-50 dark:focus:bg-slate-800 transition font-mono text-right pr-6"
+                                                                        value={item.manualPrice !== undefined ? item.manualPrice : item.unit_price}
+                                                                        onChange={(e) => updateCostItem(category.id, item.name, 'manualPrice', parseFloat(e.target.value))}
+                                                                        placeholder="Fiyat"
+                                                                    />
+                                                                    <span className="absolute right-2 text-[9px] text-slate-500">₺</span>
+                                                                </div>
+                                                                <div className="flex justify-between mt-1 px-1">
+                                                                    <span className="text-[9px] text-slate-500 uppercase">Birim Fiyat</span>
+                                                                    {item.manualPrice !== undefined && (
+                                                                        <button 
+                                                                            onClick={() => updateCostItem(category.id, item.name, 'manualPrice', undefined)}
+                                                                            className="text-[9px] text-yellow-600 dark:text-yellow-500 hover:text-yellow-500 uppercase font-bold"
+                                                                        >
+                                                                            Sıfırla
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
