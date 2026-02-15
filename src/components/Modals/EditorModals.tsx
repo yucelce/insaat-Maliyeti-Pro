@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Room, Wall, Column, Beam, RoomType, RoomProperties, WallProperties, ColumnProperties, BeamProperties } from '../../types';
+import { Room, Wall, Column, Beam, Slab, RoomType, RoomProperties, WallProperties, ColumnProperties, BeamProperties, SlabProperties } from '../../types';
 
 // --- WALL MODAL ---
 interface WallModalProps {
@@ -46,6 +47,21 @@ export const WallModal: React.FC<WallModalProps> = ({ wall, scale, onUpdate, onD
                         <option value={25}>25 cm</option>
                     </select>
                 </div>
+                
+                {/* Manuel Height */}
+                <div>
+                    <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Duvar Yüksekliği (m)</label>
+                    <input 
+                        type="number" 
+                        step="0.01"
+                        value={wall.properties.height || ''} 
+                        onChange={(e) => onUpdate({ height: parseFloat(e.target.value) })}
+                        className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm font-mono focus:border-blue-500 outline-none"
+                        placeholder="Otomatik (Kat Yüksekliği)"
+                    />
+                    <p className="text-[9px] text-slate-500 mt-1">Boş bırakılırsa kat yüksekliğinden döşeme kalınlığı (15cm) düşülür.</p>
+                </div>
+
                 <div className="bg-slate-800 p-3 rounded border border-slate-700">
                     <label className="flex items-center gap-3 cursor-pointer mb-3">
                         <input 
@@ -77,6 +93,64 @@ export const WallModal: React.FC<WallModalProps> = ({ wall, scale, onUpdate, onD
             <div className="p-4 border-t border-slate-700 bg-slate-800/50 rounded-b-xl flex gap-3">
                 <button onClick={onClose} className="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 hover:text-white py-2 rounded-lg font-bold transition border border-slate-700 text-sm">İptal</button>
                 <button onClick={onSave} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-bold transition shadow-lg text-sm">Kaydet</button>
+            </div>
+        </div>
+        </div>
+    );
+};
+
+// --- SLAB MODAL ---
+interface SlabModalProps {
+    slab: Slab;
+    scale: number;
+    onUpdate: (props: Partial<SlabProperties>) => void;
+    onDelete: () => void;
+    onClose: () => void;
+    onSave: () => void;
+}
+
+export const SlabModal: React.FC<SlabModalProps> = ({ slab, scale, onUpdate, onDelete, onClose, onSave }) => {
+    const area = slab.area_px && scale > 0 ? slab.area_px / (scale * scale) : slab.manualAreaM2;
+
+    return (
+        <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center backdrop-blur-sm p-4">
+        <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-sm flex flex-col animate-fadeIn">
+            <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50 rounded-t-xl">
+                <h3 className="text-white font-bold text-lg"><i className="fas fa-layer-group mr-2 text-purple-500"></i>Döşeme Detay</h3>
+                <button onClick={onDelete} className="text-red-500 hover:text-red-400 text-xs uppercase font-bold tracking-wide"><i className="fas fa-trash mr-1"></i>Sil</button>
+            </div>
+            <div className="p-6 space-y-4">
+                <div className="bg-purple-900/10 p-3 rounded border border-purple-900/30 text-[10px] text-purple-200 text-center">
+                    <span className="block text-xl font-bold">{area.toFixed(2)} m²</span>
+                    <span>Hesaplanan Alan</span>
+                </div>
+
+                <div>
+                    <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Döşeme Tipi</label>
+                    <select
+                        className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm outline-none focus:border-purple-500"
+                        value={slab.properties.type}
+                        onChange={(e) => onUpdate({ type: e.target.value as any })}
+                    >
+                        <option value="plak">Plak Döşeme</option>
+                        <option value="asmolen">Asmolen</option>
+                        <option value="mantar">Mantar</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Döşeme Kalınlığı (cm)</label>
+                    <input 
+                        type="number" 
+                        value={slab.properties.thickness} 
+                        onChange={(e) => onUpdate({ thickness: parseFloat(e.target.value) })}
+                        className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono text-center" 
+                    />
+                </div>
+            </div>
+            <div className="p-4 border-t border-slate-700 bg-slate-800/50 rounded-b-xl flex gap-3">
+                <button onClick={onClose} className="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 hover:text-white py-2 rounded-lg font-bold transition border border-slate-700 text-sm">İptal</button>
+                <button onClick={onSave} className="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-2 rounded-lg font-bold transition shadow-lg text-sm">Kaydet</button>
             </div>
         </div>
         </div>
@@ -125,10 +199,12 @@ export const ColumnModal: React.FC<ColumnModalProps> = ({ column, scale, onUpdat
                     <input 
                         type="number" 
                         step="0.01"
-                        value={column.properties.height} 
+                        value={column.properties.height || ''} 
                         onChange={(e) => onUpdate({ height: parseFloat(e.target.value) })}
-                        className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono" 
+                        className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono focus:border-red-500 outline-none" 
+                        placeholder="Otomatik (Kat Yüksekliği)"
                     />
+                    <p className="text-[9px] text-slate-500 mt-1">Boş bırakılırsa kat yüksekliği kullanılır.</p>
                 </div>
 
                 <div>
@@ -194,18 +270,6 @@ export const BeamModal: React.FC<BeamModalProps> = ({ beam, scale, onUpdate, onD
                             className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono text-center" 
                         />
                     </div>
-                </div>
-
-                <div>
-                    <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Döşeme Kalınlığı (cm)</label>
-                    <input 
-                        type="number" 
-                        value={beam.properties.slabThickness} 
-                        onChange={(e) => onUpdate({ slabThickness: parseFloat(e.target.value) })}
-                        className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono" 
-                        placeholder="Örn: 15"
-                    />
-                    <p className="text-[9px] text-slate-500 mt-1">Kalıp metrajında yan yüzeyden düşülür.</p>
                 </div>
             </div>
             <div className="p-4 border-t border-slate-700 bg-slate-800/50 rounded-b-xl flex gap-3">
@@ -328,7 +392,15 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                              <label className="block text-slate-400 text-xs font-bold uppercase mb-1">Tavan Yüksekliği (m)</label>
-                             <input type="number" step="0.1" value={room.properties.ceilingHeight} onChange={(e) => onUpdate({ ceilingHeight: parseFloat(e.target.value) })} className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white" />
+                             <input 
+                                type="number" 
+                                step="0.1" 
+                                value={room.properties.ceilingHeight || ''} 
+                                onChange={(e) => onUpdate({ ceilingHeight: parseFloat(e.target.value) })} 
+                                className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white focus:border-blue-500 outline-none"
+                                placeholder="Otomatik"
+                            />
+                            <p className="text-[9px] text-slate-500 mt-1">Boş bırakılırsa kat yüksekliği kullanılır.</p>
                         </div>
                         <div>
                              <label className="block text-slate-400 text-xs font-bold uppercase mb-1">Pencere Alanı (m²)</label>

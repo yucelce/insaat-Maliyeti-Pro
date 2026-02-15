@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { UnitType, Wall, Column, Beam, WallMaterial, WallProperties, ColumnProperties, BeamProperties } from '../../types';
+import { UnitType, Wall, Column, Beam, Slab, WallMaterial } from '../../types';
 
 interface StructuralManagerModalProps {
     unit: UnitType;
@@ -8,12 +9,13 @@ interface StructuralManagerModalProps {
 }
 
 export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ unit, onClose, onUpdateUnit }) => {
-    const [activeTab, setActiveTab] = useState<'wall' | 'column' | 'beam'>('wall');
+    const [activeTab, setActiveTab] = useState<'wall' | 'column' | 'beam' | 'slab'>('wall');
 
     // --- FORM STATES ---
-    const [wallForm, setWallForm] = useState<{len: number, mat: WallMaterial, thick: number}>({ len: 5, mat: 'gazbeton', thick: 13.5 });
-    const [colForm, setColForm] = useState<{w: number, d: number, h: number, count: number}>({ w: 30, d: 60, h: 2.9, count: 1 });
+    const [wallForm, setWallForm] = useState<{len: number, mat: WallMaterial, thick: number, height: number}>({ len: 5, mat: 'gazbeton', thick: 13.5, height: 0 });
+    const [colForm, setColForm] = useState<{w: number, d: number, h: number, count: number}>({ w: 30, d: 60, h: 0, count: 1 });
     const [beamForm, setBeamForm] = useState<{w: number, h: number, len: number, count: number}>({ w: 25, h: 50, len: 4, count: 1 });
+    const [slabForm, setSlabForm] = useState<{area: number, thick: number, type: 'plak'|'asmolen'|'mantar', count: number}>({ area: 20, thick: 15, type: 'plak', count: 1 });
 
     const handleAddWall = () => {
         const newWall: Wall = {
@@ -21,7 +23,13 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
             startPoint: {x:0, y:0}, endPoint: {x:0, y:0}, // Dummy points
             length_px: 0,
             manualLengthM: wallForm.len,
-            properties: { material: wallForm.mat, thickness: wallForm.thick, isUnderBeam: false, beamHeight: 0 }
+            properties: { 
+                material: wallForm.mat, 
+                thickness: wallForm.thick, 
+                height: wallForm.height > 0 ? wallForm.height : undefined,
+                isUnderBeam: false, 
+                beamHeight: 0 
+            }
         };
         onUpdateUnit({ ...unit, walls: [...unit.walls, newWall] });
     };
@@ -37,7 +45,11 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
                 area_px: 0, perimeter_px: 0,
                 manualAreaM2: areaM2,
                 manualPerimeterM: perimM,
-                properties: { type: 'kolon', height: colForm.h, connectingBeamHeight: 50 }
+                properties: { 
+                    type: 'kolon', 
+                    height: colForm.h > 0 ? colForm.h : undefined, // Auto if 0
+                    connectingBeamHeight: 50 
+                }
             });
         }
         onUpdateUnit({ ...unit, columns: [...unit.columns, ...newCols] });
@@ -57,10 +69,23 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
         onUpdateUnit({ ...unit, beams: [...unit.beams, ...newBeams] });
     };
 
-    const handleDelete = (type: 'wall'|'column'|'beam', id: string) => {
+    const handleAddSlab = () => {
+        const newSlabs: Slab[] = [];
+        for(let i=0; i<slabForm.count; i++) {
+            newSlabs.push({
+                id: Date.now().toString() + i,
+                manualAreaM2: slabForm.area,
+                properties: { type: slabForm.type, thickness: slabForm.thick }
+            });
+        }
+        onUpdateUnit({ ...unit, slabs: [...(unit.slabs || []), ...newSlabs] });
+    };
+
+    const handleDelete = (type: 'wall'|'column'|'beam'|'slab', id: string) => {
         if(type === 'wall') onUpdateUnit({ ...unit, walls: unit.walls.filter(w => w.id !== id) });
         if(type === 'column') onUpdateUnit({ ...unit, columns: unit.columns.filter(c => c.id !== id) });
         if(type === 'beam') onUpdateUnit({ ...unit, beams: unit.beams.filter(b => b.id !== id) });
+        if(type === 'slab') onUpdateUnit({ ...unit, slabs: (unit.slabs || []).filter(s => s.id !== id) });
     };
 
     return (
@@ -89,6 +114,10 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
                             <i className="fas fa-grip-lines w-6"></i> Kirişler
                             <span className="ml-2 bg-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">{unit.beams.length}</span>
                         </button>
+                        <button onClick={() => setActiveTab('slab')} className={`p-4 text-left font-bold text-sm border-l-4 transition ${activeTab==='slab' ? 'bg-slate-800 border-purple-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>
+                            <i className="fas fa-layer-group w-6"></i> Döşemeler
+                            <span className="ml-2 bg-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">{(unit.slabs || []).length}</span>
+                        </button>
                     </div>
 
                     {/* Content Area */}
@@ -101,6 +130,10 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
                                     <select value={wallForm.mat} onChange={e=>setWallForm({...wallForm, mat: e.target.value as any})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-32"><option value="gazbeton">Gazbeton</option><option value="tugla">Tuğla</option><option value="briket">Briket</option><option value="alcipan">Alçıpan</option></select></div>
                                     <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Kalınlık (cm)</label>
                                     <select value={wallForm.thick} onChange={e=>setWallForm({...wallForm, thick: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-24"><option value={10}>10</option><option value={13.5}>13.5</option><option value={20}>20</option></select></div>
+                                    
+                                    <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Yükseklik (m)</label>
+                                    <input type="number" step="0.01" value={wallForm.height || ''} onChange={e=>setWallForm({...wallForm, height: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-20" placeholder="Oto" /></div>
+
                                     <div className="flex-1"><label className="text-[10px] text-slate-400 font-bold block mb-1">Uzunluk (m)</label>
                                     <input type="number" value={wallForm.len} onChange={e=>setWallForm({...wallForm, len: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-full" /></div>
                                     <button onClick={handleAddWall} className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded font-bold text-sm">Ekle</button>
@@ -112,8 +145,10 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
                                     <input type="number" value={colForm.w} onChange={e=>setColForm({...colForm, w: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-20" /></div>
                                     <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Boy (cm)</label>
                                     <input type="number" value={colForm.d} onChange={e=>setColForm({...colForm, d: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-20" /></div>
+                                    
                                     <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Yükseklik (m)</label>
-                                    <input type="number" value={colForm.h} onChange={e=>setColForm({...colForm, h: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-20" /></div>
+                                    <input type="number" value={colForm.h || ''} onChange={e=>setColForm({...colForm, h: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-20" placeholder="Oto" /></div>
+                                    
                                     <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Adet</label>
                                     <input type="number" value={colForm.count} onChange={e=>setColForm({...colForm, count: Math.max(1, parseInt(e.target.value))})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-16" /></div>
                                     <button onClick={handleAddColumn} className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded font-bold text-sm">Ekle</button>
@@ -130,6 +165,19 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
                                     <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Adet</label>
                                     <input type="number" value={beamForm.count} onChange={e=>setBeamForm({...beamForm, count: Math.max(1, parseInt(e.target.value))})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-16" /></div>
                                     <button onClick={handleAddBeam} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-bold text-sm">Ekle</button>
+                                </div>
+                            )}
+                            {activeTab === 'slab' && (
+                                <div className="flex gap-4 items-end">
+                                    <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Tip</label>
+                                    <select value={slabForm.type} onChange={e=>setSlabForm({...slabForm, type: e.target.value as any})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-28"><option value="plak">Plak</option><option value="asmolen">Asmolen</option><option value="mantar">Mantar</option></select></div>
+                                    <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Kalınlık (cm)</label>
+                                    <input type="number" value={slabForm.thick} onChange={e=>setSlabForm({...slabForm, thick: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-20" /></div>
+                                    <div className="flex-1"><label className="text-[10px] text-slate-400 font-bold block mb-1">Alan (m²)</label>
+                                    <input type="number" value={slabForm.area} onChange={e=>setSlabForm({...slabForm, area: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-full" /></div>
+                                    <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Adet</label>
+                                    <input type="number" value={slabForm.count} onChange={e=>setSlabForm({...slabForm, count: Math.max(1, parseInt(e.target.value))})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-16" /></div>
+                                    <button onClick={handleAddSlab} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded font-bold text-sm">Ekle</button>
                                 </div>
                             )}
                         </div>
@@ -150,7 +198,9 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
                                     {activeTab === 'wall' && unit.walls.map((w, i) => (
                                         <tr key={w.id} className="hover:bg-slate-700/30 transition">
                                             <td className="p-2 font-medium text-white">{w.properties.material} ({w.properties.thickness}cm)</td>
-                                            <td className="p-2">-</td>
+                                            <td className="p-2">
+                                                H: {w.properties.height ? `${w.properties.height}m` : 'Oto'}
+                                            </td>
                                             <td className="p-2 font-mono text-yellow-400">
                                                 {w.manualLengthM ? w.manualLengthM.toFixed(2) : (unit.scale > 0 ? (w.length_px/unit.scale).toFixed(2) : 0)} m
                                             </td>
@@ -161,7 +211,7 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
                                     {activeTab === 'column' && unit.columns.map((c, i) => (
                                         <tr key={c.id} className="hover:bg-slate-700/30 transition">
                                             <td className="p-2 font-medium text-white">{c.properties.type}</td>
-                                            <td className="p-2">H: {c.properties.height}m</td>
+                                            <td className="p-2">H: {c.properties.height || 'Oto'}m</td>
                                             <td className="p-2 font-mono text-red-400">
                                                 {c.manualAreaM2 ? c.manualAreaM2.toFixed(2) : (unit.scale > 0 ? (c.area_px/(unit.scale**2)).toFixed(2) : 0)} m²
                                             </td>
@@ -180,11 +230,23 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
                                             <td className="p-2 text-right"><button onClick={()=>handleDelete('beam', b.id)} className="text-red-500 hover:text-white"><i className="fas fa-trash"></i></button></td>
                                         </tr>
                                     ))}
+                                    {activeTab === 'slab' && (unit.slabs || []).map((s, i) => (
+                                        <tr key={s.id} className="hover:bg-slate-700/30 transition">
+                                            <td className="p-2 font-medium text-white capitalize">{s.properties.type} Döşeme</td>
+                                            <td className="p-2">d: {s.properties.thickness} cm</td>
+                                            <td className="p-2 font-mono text-purple-400">
+                                                {s.manualAreaM2.toFixed(2)} m²
+                                            </td>
+                                            <td className="p-2 text-xs"><span className="text-green-500">Manuel</span></td>
+                                            <td className="p-2 text-right"><button onClick={()=>handleDelete('slab', s.id)} className="text-red-500 hover:text-white"><i className="fas fa-trash"></i></button></td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                              {(activeTab === 'wall' && unit.walls.length === 0) && <div className="p-4 text-center text-slate-500 text-sm">Kayıtlı duvar yok.</div>}
                              {(activeTab === 'column' && unit.columns.length === 0) && <div className="p-4 text-center text-slate-500 text-sm">Kayıtlı kolon yok.</div>}
                              {(activeTab === 'beam' && unit.beams.length === 0) && <div className="p-4 text-center text-slate-500 text-sm">Kayıtlı kiriş yok.</div>}
+                             {(activeTab === 'slab' && (unit.slabs || []).length === 0) && <div className="p-4 text-center text-slate-500 text-sm">Kayıtlı döşeme yok.</div>}
                         </div>
                     </div>
                 </div>

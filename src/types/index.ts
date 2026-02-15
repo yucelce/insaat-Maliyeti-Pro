@@ -1,10 +1,11 @@
+
 export type Point = { x: number; y: number };
 export type RoomType = 'living' | 'wet' | 'balcony' | 'other' | null;
 export type WallMaterial = 'gazbeton' | 'tugla' | 'briket' | 'alcipan';
 export type UnitFloorType = 'normal' | 'ground' | 'basement';
 
 export interface RoomProperties {
-  ceilingHeight: number;
+  ceilingHeight?: number; // Optional: if undefined, use floor height
   windowArea: number; 
   doorCount: number; 
   hasCornice: boolean;
@@ -15,13 +16,14 @@ export interface RoomProperties {
 export interface WallProperties {
   material: WallMaterial;
   thickness: number; // cm
+  height?: number; // m (Optional manual height override)
   isUnderBeam: boolean;
   beamHeight: number; // cm
 }
 
 export interface ColumnProperties {
     type: 'kolon' | 'perde';
-    height: number;
+    height?: number; // m (Optional: if undefined, use floor height)
     connectingBeamHeight: number;
 }
 
@@ -29,6 +31,11 @@ export interface BeamProperties {
     width: number; // cm
     height: number; // cm
     slabThickness: number; // cm
+}
+
+export interface SlabProperties {
+    type: 'plak' | 'asmolen' | 'mantar';
+    thickness: number; // cm
 }
 
 export type Room = {
@@ -71,6 +78,17 @@ export type Beam = {
     properties: BeamProperties;
 };
 
+export type Slab = {
+    id: string;
+    // Geometry for drawing
+    points?: Point[]; 
+    area_px?: number;
+    perimeter_px?: number;
+    // Manual override
+    manualAreaM2: number;
+    properties: SlabProperties;
+};
+
 export interface UnitType {
     id: string;
     name: string;
@@ -80,11 +98,13 @@ export interface UnitType {
     walls: Wall[]; 
     columns: Column[];
     beams: Beam[];
+    slabs: Slab[]; // New: Slabs
     imageData: string | null; 
     scale: number; 
     lastEdited: number;
-    // New: Toggle source for structural calculations
-    structuralSource: 'global_calculated' | 'detailed_unit';
+    // Split sources
+    structuralWallSource: 'global_calculated' | 'detailed_unit';
+    structuralConcreteSource: 'global_calculated' | 'detailed_unit';
 }
 
 export interface BuildingStats {
