@@ -29,14 +29,14 @@ export const COST_DATA: CostCategory[] = [
     id: "resmi_idari",
     title: "1. Projelendirme ve Resmi Giderler",
     items: [
-      { name: "Mimari Proje", unit: "Paket", unit_price: 25000, auto_source: "total_area", multiplier: 1, scope: 'global' },
+      { name: "Mimari Proje", unit: "m2", unit_price: 25000, auto_source: "total_area", multiplier: 1, scope: 'global' },
       { name: "Statik Proje", unit: "m2", unit_price: 45, auto_source: "total_area", multiplier: 1, scope: 'global' },
       { name: "Mekanik Proje", unit: "m2", unit_price: 35, auto_source: "total_area", multiplier: 1, scope: 'global' },
       { name: "Elektrik Projesi", unit: "m2", unit_price: 35, auto_source: "total_area", multiplier: 1, scope: 'global' },
       { name: "Zemin Etüdü", unit: "Paket", unit_price: 15000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Haritacı Ücreti (Lihkab)", unit: "Paket", unit_price: 8000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Akustik Rapor", unit: "Paket", unit_price: 5000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Yapı Denetim Hizmet Bedeli", unit: "m2", unit_price: 150, auto_source: "total_area", multiplier: 1, scope: 'global' },
+      { name: "Yapı Denetim Hizmet Bedeli", unit: "Paket", unit_price: 150, auto_source: "manual", multiplier: 1, scope: 'global',inputType: 'manual_total'  },
       { name: "Ruhsat ve İskan Harçları", unit: "Toplam", unit_price: 50000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Şantiye Şefi (Aylık)", unit: "Ay", unit_price: 20000, auto_source: "manual", multiplier: 1, scope: 'global' },
       { name: "Enerji Kimlik Belgesi", unit: "Paket", unit_price: 3000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
@@ -79,7 +79,6 @@ export const COST_DATA: CostCategory[] = [
       { name: "Kalıp İşçiliği & Malzeme", unit: "m2", unit_price: 850, auto_source: "total_area", multiplier: 2.6, wixId: "kalipdemirbetonisc", scope: 'global' },
       { name: "Temel Su Yalıtımı (Bohçalama)", unit: "m2", unit_price: 450, auto_source: "total_area", multiplier: 0.25, scope: 'global' },
       { name: "Çatı Konstrüksiyon ve Kaplama", unit: "m2", unit_price: 2200, auto_source: "total_area", multiplier: 0.25, scope: 'global' },
-      { name: "Asansör Kuyu ve Ray İşleri", unit: "Adet", unit_price: 45000, auto_source: "manual", multiplier: 1, scope: 'global' },
       // NEW ITEMS
       { name: "Balkon ve Teras Su Yalıtımı", unit: "m2", unit_price: 350, auto_source: "total_area", multiplier: 0.15, scope: 'global' }
     ]
