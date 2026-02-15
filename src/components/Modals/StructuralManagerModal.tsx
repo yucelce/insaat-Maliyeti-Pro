@@ -12,10 +12,14 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
     const [activeTab, setActiveTab] = useState<'wall' | 'column' | 'beam' | 'slab'>('wall');
 
     // --- FORM STATES ---
-    const [wallForm, setWallForm] = useState<{len: number, mat: WallMaterial, thick: number, height: number}>({ len: 5, mat: 'gazbeton', thick: 13.5, height: 0 });
+    // Default thickness updated to 15 to match Gazbeton 15'lik cost item
+    const [wallForm, setWallForm] = useState<{len: number, mat: WallMaterial, thick: number, height: number}>({ len: 5, mat: 'gazbeton', thick: 15, height: 0 });
     const [colForm, setColForm] = useState<{w: number, d: number, h: number, count: number}>({ w: 30, d: 60, h: 0, count: 1 });
     const [beamForm, setBeamForm] = useState<{w: number, h: number, len: number, count: number}>({ w: 25, h: 50, len: 4, count: 1 });
     const [slabForm, setSlabForm] = useState<{area: number, thick: number, type: 'plak'|'asmolen'|'mantar', count: number}>({ area: 20, thick: 15, type: 'plak', count: 1 });
+
+    const isWallAuto = unit.structuralWallSource === 'global_calculated';
+    const isConcreteAuto = unit.structuralConcreteSource === 'global_calculated';
 
     const handleAddWall = () => {
         const newWall: Wall = {
@@ -99,6 +103,21 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
                     <button onClick={onClose} className="text-slate-400 hover:text-white"><i className="fas fa-times text-xl"></i></button>
                 </div>
 
+                {/* WARNING BANNER FOR AUTO MODE */}
+                {(isWallAuto || isConcreteAuto) && (
+                    <div className="bg-yellow-900/40 border-b border-yellow-600/30 p-3 px-6 flex items-start gap-3 animate-fadeIn">
+                        <i className="fas fa-exclamation-triangle text-yellow-500 mt-0.5 text-lg"></i>
+                        <div className="text-xs text-yellow-200/90">
+                            <strong className="block text-yellow-100 mb-1">DİKKAT: Otomatik Hesaplama Modu Aktif</strong>
+                            <ul className="list-disc pl-4 space-y-0.5">
+                                {isWallAuto && <li>Duvar metrajı şu an <b>Otomatik (m² bazlı)</b> hesaplanıyor. Buraya eklediğiniz duvarlar maliyete yansımaz.</li>}
+                                {isConcreteAuto && <li>Betonarme metrajı şu an <b>Otomatik (m² bazlı)</b> hesaplanıyor. Buraya eklediğiniz elemanlar maliyete yansımaz.</li>}
+                            </ul>
+                            <div className="mt-1 text-yellow-400/80 italic">Maliyete yansıması için ana ekrandan ilgili modu "Detaylı" olarak değiştiriniz.</div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex flex-1 overflow-hidden">
                     {/* Sidebar Tabs */}
                     <div className="w-48 bg-slate-900 border-r border-slate-800 flex flex-col">
@@ -129,7 +148,13 @@ export const StructuralManagerModal: React.FC<StructuralManagerModalProps> = ({ 
                                     <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Malzeme</label>
                                     <select value={wallForm.mat} onChange={e=>setWallForm({...wallForm, mat: e.target.value as any})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-32"><option value="gazbeton">Gazbeton</option><option value="tugla">Tuğla</option><option value="briket">Briket</option><option value="alcipan">Alçıpan</option></select></div>
                                     <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Kalınlık (cm)</label>
-                                    <select value={wallForm.thick} onChange={e=>setWallForm({...wallForm, thick: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-24"><option value={10}>10</option><option value={13.5}>13.5</option><option value={20}>20</option></select></div>
+                                    <select value={wallForm.thick} onChange={e=>setWallForm({...wallForm, thick: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-24">
+                                        <option value={10}>10</option>
+                                        <option value={13.5}>13.5</option>
+                                        <option value={15}>15</option>
+                                        <option value={20}>20</option>
+                                        <option value={25}>25</option>
+                                    </select></div>
                                     
                                     <div><label className="text-[10px] text-slate-400 font-bold block mb-1">Yükseklik (m)</label>
                                     <input type="number" step="0.01" value={wallForm.height || ''} onChange={e=>setWallForm({...wallForm, height: parseFloat(e.target.value)})} className="bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white w-20" placeholder="Oto" /></div>

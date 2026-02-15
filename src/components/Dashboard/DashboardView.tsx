@@ -372,7 +372,16 @@ export const DashboardView: React.FC = () => {
                                 {expandedCategories[category.id] && (
                                     <div className="p-4 bg-white dark:bg-slate-900/30 animate-fadeIn">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {category.items.map((item) => (
+                                            {category.items.map((item) => {
+                                                // --- YENİ EKLENEN KISIM: Miktar 0 ise gizle ---
+                                                // item.finalQty varsa onu kullan, yoksa manuel/oto kontrolü yap
+                                                const currentQty = item.finalQty ?? (item.manualQuantity ?? item.calculatedAutoQty);
+                                                
+                                                // Eğer miktar 0.001'den küçükse (neredeyse 0 ise) ekrana basma
+                                                if (currentQty <= 0.001) return null;
+                                                // ----------------------------------------------
+                                                
+                                                return (
                                                 <div key={item.name} className="flex flex-col gap-2 p-3 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                                                     <div className="flex justify-between items-center">
                                                         <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{item.name}</span>
@@ -463,7 +472,8 @@ export const DashboardView: React.FC = () => {
                                                         </div>
                                                     )}
                                                 </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}

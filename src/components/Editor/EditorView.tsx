@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { UnitType, Room, Wall, Column, Beam, Slab, Point } from '../../types';
 import { isPointInPolygon, getPolygonAreaAndPerimeter, distanceToSegment, floodFillRoom } from '../../utils/geometry';
@@ -305,6 +306,12 @@ export const EditorView: React.FC = () => {
          setEditorBeams([...editorBeams, newBeam]); setSelectedBeamId(newBeam.id); setModalType('beamParams');
     };
 
+    // Calculate warnings
+    const isStructural = editorScope === 'structural';
+    const isWallAuto = sourceUnit?.structuralWallSource === 'global_calculated';
+    const isConcreteAuto = sourceUnit?.structuralConcreteSource === 'global_calculated';
+    const showWarning = isStructural && (isWallAuto || isConcreteAuto);
+
     // --- CANVAS RENDERING ---
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -512,6 +519,18 @@ export const EditorView: React.FC = () => {
 
         {/* Center Canvas */}
         <div className="flex-1 relative bg-slate-100 dark:bg-slate-950 overflow-hidden flex flex-col transition-colors duration-300">
+            {/* Warning Banner for Structural Mode */}
+            {showWarning && (
+                <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-30 bg-yellow-600/90 text-white px-4 py-2 rounded shadow-lg backdrop-blur text-xs font-bold flex items-center gap-2 border border-yellow-400">
+                    <i className="fas fa-exclamation-triangle"></i>
+                    <span>
+                        {isWallAuto && isConcreteAuto ? "DİKKAT: Duvar ve Beton Oto Modda. Çizimler hesaba katılmaz!" : 
+                         isWallAuto ? "DİKKAT: Duvar Oto Modda. Duvar çizimleri hesaba katılmaz!" : 
+                         "DİKKAT: Beton Oto Modda. Yapısal çizimler hesaba katılmaz!"}
+                    </span>
+                </div>
+            )}
+
             <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 bg-white/90 dark:bg-slate-800/90 p-1 rounded border border-slate-200 dark:border-slate-700 shadow-xl backdrop-blur">
                 <button onClick={() => setZoom(z => Math.min(z + 0.2, 10))} className="w-8 h-8 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 rounded"><i className="fas fa-plus"></i></button>
                 <span className="text-center text-xs text-slate-600 dark:text-slate-400 font-mono select-none">{Math.round(zoom * 100)}%</span>

@@ -43,6 +43,7 @@ export const WallModal: React.FC<WallModalProps> = ({ wall, scale, onUpdate, onD
                     >
                         <option value={10}>10 cm</option>
                         <option value={13.5}>13.5 cm</option>
+                        <option value={15}>15 cm</option>
                         <option value={20}>20 cm</option>
                         <option value={25}>25 cm</option>
                     </select>

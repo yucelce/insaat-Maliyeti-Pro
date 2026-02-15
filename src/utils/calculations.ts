@@ -67,22 +67,16 @@ export const calculateUnitCost = (unit: UnitType, currentCosts: CostCategory[], 
       if (room.properties.hasCornice) {
         stats.cornice_length += perimeterM;
       }
-      
-      // Architectural Wall Area Calculation (Paint/Plaster)
-      // If room has specific ceiling height, use it. Otherwise use Floor Height.
-      const roomHeight = (room.properties.ceilingHeight && room.properties.ceilingHeight > 0) 
-                         ? room.properties.ceilingHeight 
-                         : defaultFloorHeight;
-                         
-      // Approximate wall area: Perimeter * Height * 0.9 (deducting windows/doors roughly)
-      // This contributes to 'net_wall_area' used for Paint/Plaster
-      // Note: We accumulate this here for architectural precision, overriding the global approximation later if we have rooms.
     });
 
     // --- STRUCTURAL WALLS ---
-    if (unit.structuralWallSource === 'detailed_unit') {
-        // DETAILED WALLS
-        (unit.walls || []).forEach(wall => {
+    // Rule: If set to Detailed BUT no walls exist, fallback to Auto estimation.
+    const hasWalls = unit.walls && unit.walls.length > 0;
+    const useDetailedWalls = unit.structuralWallSource === 'detailed_unit' && hasWalls;
+    
+    if (useDetailedWalls) {
+        // DETAILED WALLS CALCULATION
+        unit.walls.forEach(wall => {
             let lengthM = 0;
             if (wall.manualLengthM !== undefined && wall.manualLengthM > 0) {
                 lengthM = wall.manualLengthM;
@@ -118,10 +112,8 @@ export const calculateUnitCost = (unit: UnitType, currentCosts: CostCategory[], 
                 stats.wall_briket_area += wallArea;
             }
         });
-
-        // Paint Area Strategy:
-        // If rooms are defined, we trust room perimeter logic more for paint. 
-        // If NO rooms defined but walls defined, we estimate based on walls x 2 sides.
+        
+        // Paint Area Strategy for Detailed Mode
         if (unit.rooms.length > 0) {
              let totalRoomWallArea = 0;
              unit.rooms.forEach(r => {
@@ -137,19 +129,27 @@ export const calculateUnitCost = (unit: UnitType, currentCosts: CostCategory[], 
         }
 
     } else {
-        // GLOBAL AUTO WALLS (No drawings)
+        // GLOBAL AUTO WALLS (Fallback if Auto Mode OR Detailed Mode with no walls)
         const refArea = stats.total_area > 0 ? stats.total_area : defaultFloorArea;
         
         // Use default floor height for estimation
         const estimatedPerimeter = Math.sqrt(refArea) * 4 * 1.5; // Rough interior perimeter
         const estimatedWallSurface = estimatedPerimeter * (defaultFloorHeight - 0.5); // Deduct beam/slab
         
+        // Default to Gazbeton (15'lik)
         stats.wall_gazbeton_area = estimatedWallSurface;
         stats.net_wall_area = estimatedWallSurface * 2; 
     }
 
     // --- STRUCTURAL CONCRETE (Columns, Beams, Slabs) ---
-    if (unit.structuralConcreteSource === 'detailed_unit') {
+    // Rule: If set to Detailed BUT no elements exist, fallback to Auto estimation.
+    const hasConcreteElements = (unit.columns && unit.columns.length > 0) || 
+                                (unit.beams && unit.beams.length > 0) || 
+                                (unit.slabs && unit.slabs.length > 0);
+    
+    const useDetailedConcrete = unit.structuralConcreteSource === 'detailed_unit' && hasConcreteElements;
+
+    if (useDetailedConcrete) {
         // 1. Columns
         (unit.columns || []).forEach(col => {
             let areaM2 = 0;
@@ -203,19 +203,14 @@ export const calculateUnitCost = (unit: UnitType, currentCosts: CostCategory[], 
         });
 
     } else {
-        // GLOBAL AUTO CONCRETE
+        // GLOBAL AUTO CONCRETE (Fallback if Auto Mode OR Detailed Mode with no elements)
         const refArea = stats.total_area > 0 ? stats.total_area : defaultFloorArea;
         
         const kabaCat = currentCosts.find(c => c.id === 'kaba_insaat');
         if (kabaCat) {
              const betonItem = kabaCat.items.find(i => i.name === 'Betonarme Betonu (C30)');
              if (betonItem) {
-                 // The multiplier in cost_data usually assumes a standard height. 
-                 // If the floor height changes significantly (e.g. 5m industrial), this linear approximation might vary,
-                 // but typically concrete volume per m2 is a factor of slab + (cols/area).
-                 // We scale it slightly by height ratio if it differs from standard 3m.
                  const heightRatio = defaultFloorHeight / 3.0;
-                 
                  const totalConcrete = refArea * betonItem.multiplier * heightRatio;
                  
                  stats.slab_concrete_volume = totalConcrete * 0.65;
@@ -245,7 +240,13 @@ export const calculateUnitCost = (unit: UnitType, currentCosts: CostCategory[], 
             const isFormwork = item.name === 'Kalıp İşçiliği & Malzeme';
 
             if (isConcrete || isIron || isFormwork) {
-                if (unit.structuralConcreteSource === 'detailed_unit') {
+                // If we used detailed concrete logic (meaning we had elements), sum them up.
+                // If we fell back to auto (because detailed was empty OR mode was auto), the stats
+                // are already populated with the estimates above.
+                
+                // Note: Even if useDetailedConcrete is false, the stats.* variables are filled 
+                // by the "GLOBAL AUTO CONCRETE" block above.
+                if (useDetailedConcrete) {
                     const totalVol = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
                     const totalForm = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
                     
@@ -253,21 +254,13 @@ export const calculateUnitCost = (unit: UnitType, currentCosts: CostCategory[], 
                     else if (isFormwork) qty = totalForm;
                     else if (isIron) qty = totalVol * 0.100; 
                 } else {
-                    const refArea = stats.total_area > 0 ? stats.total_area : defaultFloorArea;
-                    // Note: Global auto calculation already applied height ratio above to stats, but here we use multiplier directly if not using detailed source.
-                    // To be consistent, we should use the stats we just calculated even for global mode if we want the height ratio to stick.
-                    // However, standard multipliers are usually area-based. Let's keep multiplier for global simplicity unless specifically adjusting.
-                    // To support the user's request: "Height change -> Cost change", we applied heightRatio to stats above.
-                    // If we rely on the stats variables for global mode too, we need to map them back.
-                    // Currently, global mode logic in the block above sets stats.*. 
-                    
-                    // IF using global stats derived above:
+                    // Fallback to purely using the calculated stats from the Auto block
                     if (isConcrete) qty = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
                     else if (isFormwork) qty = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
                     else if (isIron) qty = (stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume) * 0.100;
                 }
             } 
-            else if (['Gazbeton Duvar (13.5\'luk)', 'Tuğla Duvar (13.5\'luk)', 'Briket Duvar (15\'lik)'].includes(item.name)) {
+            else if (['Gazbeton Duvar (15\'lik)', 'Tuğla Duvar (13.5\'luk)', 'Briket Duvar (15\'lik)'].includes(item.name)) {
                  // @ts-ignore
                  const rawVal = stats[item.auto_source] || 0;
                  qty = parseFloat((rawVal * item.multiplier).toFixed(2));

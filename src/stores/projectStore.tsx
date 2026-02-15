@@ -164,15 +164,45 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             const processedItems = category.items.map(item => {
                 let autoQty = 0;
                 
-                if (item.auto_source !== 'manual') {
+                // --- AUTO MODE OVERRIDES ---
+                // Decouple from unit list details if Global Auto Mode is active.
+                // This prevents cost fluctuations when changing unit types in the list while in Auto Mode.
+                
+                const isConcreteItem = ['Betonarme Betonu (C30)', 'İnşaat Demiri', 'Kalıp İşçiliği & Malzeme', 'Temel Su Yalıtımı (Bohçalama)', 'Çatı Konstrüksiyon ve Kaplama'].includes(item.name);
+                const isWallItem = ['Gazbeton Duvar (15\'lik)', 'Tuğla Duvar (13.5\'luk)', 'Briket Duvar (15\'lik)'].includes(item.name);
+                const isFinishItem = ['İç Sıva (Kara Sıva)', 'Alçı Sıva (Kaba+Saten)', 'İç Cephe Boyası', 'Duvar Örme Harcı ve Yapıştırıcı'].includes(item.name);
+
+                if (category.id === 'kaba_insaat' && globalConcreteMode === 'auto' && isConcreteItem) {
+                     // Force Global Calculation based on Total Construction Area
+                     autoQty = totalConstructionArea * item.multiplier;
+                }
+                else if (category.id === 'duvar_tavan' && globalWallMode === 'auto' && (isWallItem || isFinishItem)) {
+                     // Estimate Global Wall Quantities based on Total Area
+                     // Heuristic: Wall Surface Area approx 1.2x Floor Area for standard layouts
+                     const wallRatio = 1.2; 
+                     
+                     if (isWallItem) {
+                         // Default to Gazbeton if purely auto, or split if logic allowed (keeping simple: Gazbeton gets the volume)
+                         if (item.name === "Gazbeton Duvar (15'lik)") {
+                             autoQty = totalConstructionArea * wallRatio * item.multiplier;
+                         } else {
+                             autoQty = 0; // Other wall types 0 in generic auto mode
+                         }
+                     } else if (isFinishItem) {
+                         // Finishes apply to both sides of the wall (approx 2x)
+                         // Mortar applies to the wall area (1x)
+                         const sideMultiplier = item.name.includes("Harcı") ? 1 : 2;
+                         autoQty = totalConstructionArea * wallRatio * sideMultiplier * item.multiplier;
+                     }
+                }
+                else if (item.auto_source !== 'manual') {
+                    // Standard Aggregation
                     autoQty = aggregatedQuantities.get(item.name) || 0;
                     
+                    // Global Fallback (for items not caught above)
                     if (autoQty === 0 && item.scope === 'global') {
                         if (item.auto_source === 'total_area') {
-                             const isConcreteOrIron = ['Betonarme Betonu (C30)', 'İnşaat Demiri', 'Kalıp İşçiliği & Malzeme'].includes(item.name);
-                             if (!isConcreteOrIron) {
-                                  autoQty = totalConstructionArea * item.multiplier;
-                             }
+                             autoQty = totalConstructionArea * item.multiplier;
                         } else if (item.auto_source === 'land_area') {
                              autoQty = buildingStats.landArea * item.multiplier;
                         }
@@ -180,7 +210,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 }
 
                 // Handling for 'manual_total' (Lump Sum) items
-                // Force quantity to 1 if it's a manual total input style, so price acts as total
                 let finalQty = item.manualQuantity !== undefined ? item.manualQuantity : autoQty;
                 
                 if (item.inputType === 'manual_total') {
@@ -200,7 +229,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
 
         return { projectCostDetails: details, projectTotalCost: structuralCost + fitoutCost, globalStructuralCost: structuralCost, interiorFitoutCost: fitoutCost };
-    }, [costs, units, structuralUnits, totalConstructionArea, buildingStats]);
+    }, [costs, units, structuralUnits, totalConstructionArea, buildingStats, globalConcreteMode, globalWallMode]);
 
 
     // --- ACTIONS ---
